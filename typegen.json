@@ -1,0 +1,113 @@
+{
+    "outDir": "src/generated_types",
+    "specVersions": "metadata.jsonl",
+    "pallets": {
+        "MiningRewards": {
+            "events": ["MinerRewarded", "FeesCollected", "TreasuryRewarded"],
+            "calls": [],
+            "storage": [],
+            "constants": ["MaxSupply"]
+        },
+        "System": {
+            "events": ["ExtrinsicFailed", "CodeUpdated"],
+            "calls": [],
+            "storage": ["Account"],
+            "constants": []
+        },
+        "Balances": {
+            "events": [
+                "Transfer",
+                "BalanceSet",
+                "Deposit",
+                "DustLost",
+                "Endowed",
+                "ReserveRepatriated",
+                "Reserved",
+                "Slashed",
+                "Unreserved",
+                "Withdraw",
+                "Minted",
+                "Burned",
+                "Suspended",
+                "Restored",
+                "Upgraded",
+                "Issued",
+                "Rescinded",
+                "Locked",
+                "Unlocked",
+                "Frozen",
+                "Thawed"
+            ],
+            "calls": [],
+            "storage": ["Account", "Holds", "TotalIssuance"],
+            "constants": []
+        },
+        "QPoW": {
+            "events": [],
+            "calls": [],
+            "storage": [],
+            "constants": ["TargetBlockTime"]
+        },
+        "ReversibleTransfers": {
+            "events": [
+                "ReversibilitySet",
+                "TransactionScheduled",
+                "TransactionCancelled",
+                "TransactionExecuted",
+                "HighSecuritySet"
+            ],
+            "calls": [],
+            "storage": ["ReversibleAccounts", "PendingTransfers", "AccountPendingIndex"]
+        },
+        "Wormhole": {
+            "events": ["NativeTransferred", "ProofVerified", "MinerVolumeFeePaid"],
+            "calls": [],
+            "storage": [],
+            "constants": []
+        },
+        "Multisig": {
+            "events": [
+                "MultisigCreated",
+                "ProposalCreated",
+                "SignerApproved",
+                "ProposalReadyToExecute",
+                "ProposalExecuted",
+                "ProposalCancelled",
+                "ProposalRemoved",
+                "DepositsClaimed"
+            ],
+            "calls": [],
+            "storage": ["Proposals"],
+            "constants": ["ProposalFee", "SignerStepFactor"]
+        },
+        "TechReferenda": {
+            "events": [
+                "Submitted",
+                "DecisionStarted",
+                "ConfirmStarted",
+                "ConfirmAborted",
+                "Confirmed",
+                "Approved",
+                "Rejected",
+                "Cancelled",
+                "TimedOut",
+                "Killed"
+            ],
+            "calls": [],
+            "storage": ["ReferendumInfoFor", "MetadataOf"],
+            "constants": ["Tracks"]
+        },
+        "Preimage": {
+            "events": [],
+            "calls": [],
+            "storage": ["PreimageFor", "RequestStatusFor"],
+            "constants": []
+        },
+        "Vesting": {
+            "events": [],
+            "calls": [],
+            "storage": ["Schedules", "Launch"],
+            "constants": []
+        }
+    }
+}

@@ -1,0 +1,1652 @@
+{
+  "resource_version": 1,
+  "metadata": {
+    "version": 3,
+    "sources": [
+      {
+        "name": "default",
+        "kind": "postgres",
+        "tables": [
+          {
+            "table": {
+              "name": "extrinsic",
+              "schema": "public"
+            },
+            "array_relationships": [
+              {
+                "name": "events",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "extrinsic_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "signer",
+                "using": {
+                  "foreign_key_constraint_on": "signer_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "scheduled_reversible_transfer",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "from",
+                "using": {
+                  "foreign_key_constraint_on": "from_id"
+                }
+              },
+              {
+                "name": "to",
+                "using": {
+                  "foreign_key_constraint_on": "to_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "scheduled_reversible_transfer_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "executed_reversible_transfer",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "scheduledTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "scheduled_transfer_id"
+                }
+              },
+              {
+                "name": "executedTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "executed_transfer_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "executed_reversible_transfer_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "cancelled_reversible_transfer",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "cancelledBy",
+                "using": {
+                  "foreign_key_constraint_on": "cancelled_by_id"
+                }
+              },
+              {
+                "name": "scheduledTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "scheduled_transfer_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "cancelled_reversible_transfer_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "miner_reward",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "miner",
+                "using": {
+                  "foreign_key_constraint_on": "miner_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "miner_reward_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "error_event",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "error_event_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "high_security_set",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "who",
+                "using": {
+                  "foreign_key_constraint_on": "who_id"
+                }
+              },
+              {
+                "name": "guardian",
+                "using": {
+                  "foreign_key_constraint_on": "guardian_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "high_security_set_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "multisig",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "creator",
+                "using": {
+                  "foreign_key_constraint_on": "creator_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "multisig_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "multisig_proposal",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "createdAtBlock",
+                "using": {
+                  "foreign_key_constraint_on": "created_at_block_id"
+                }
+              },
+              {
+                "name": "createdExtrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "created_extrinsic_id"
+                }
+              },
+              {
+                "name": "multisig",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_id"
+                }
+              },
+              {
+                "name": "proposer",
+                "using": {
+                  "foreign_key_constraint_on": "proposer_id"
+                }
+              },
+              {
+                "name": "transferTo",
+                "using": {
+                  "foreign_key_constraint_on": "transfer_to_id"
+                }
+              },
+              {
+                "name": "scheduleTo",
+                "using": {
+                  "foreign_key_constraint_on": "schedule_to_id"
+                }
+              },
+              {
+                "name": "recoverAccount",
+                "using": {
+                  "foreign_key_constraint_on": "recover_account_id"
+                }
+              },
+              {
+                "name": "guardian",
+                "using": {
+                  "foreign_key_constraint_on": "guardian_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "multisig_proposal_created",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "proposal",
+                "using": {
+                  "foreign_key_constraint_on": "proposal_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "multisig_proposal_created_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "multisig_signer_approved",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "proposal",
+                "using": {
+                  "foreign_key_constraint_on": "proposal_id"
+                }
+              },
+              {
+                "name": "approver",
+                "using": {
+                  "foreign_key_constraint_on": "approver_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "multisig_signer_approved_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "multisig_proposal_ready",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "proposal",
+                "using": {
+                  "foreign_key_constraint_on": "proposal_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "multisig_proposal_ready_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "executed_multisig_proposal",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "proposal",
+                "using": {
+                  "foreign_key_constraint_on": "proposal_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "executed_multisig_proposal_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "cancelled_multisig_proposal",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "proposal",
+                "using": {
+                  "foreign_key_constraint_on": "proposal_id"
+                }
+              },
+              {
+                "name": "cancelledBy",
+                "using": {
+                  "foreign_key_constraint_on": "cancelled_by_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "cancelled_multisig_proposal_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "removed_multisig_proposal",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "proposal",
+                "using": {
+                  "foreign_key_constraint_on": "proposal_id"
+                }
+              },
+              {
+                "name": "removedBy",
+                "using": {
+                  "foreign_key_constraint_on": "removed_by_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "removed_multisig_proposal_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "multisig_deposits_claimed",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "multisig",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_id"
+                }
+              },
+              {
+                "name": "claimer",
+                "using": {
+                  "foreign_key_constraint_on": "claimer_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "multisig_deposits_claimed_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "tech_referendum_event",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "actor",
+                "using": {
+                  "foreign_key_constraint_on": "actor_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "tech_referendum_event_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "runtime_upgrade",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "runtime_upgrade_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "event",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "transfer",
+                "using": {
+                  "foreign_key_constraint_on": "transfer_id"
+                }
+              },
+              {
+                "name": "scheduledReversibleTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "scheduled_reversible_transfer_id"
+                }
+              },
+              {
+                "name": "executedReversibleTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "executed_reversible_transfer_id"
+                }
+              },
+              {
+                "name": "cancelledReversibleTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "cancelled_reversible_transfer_id"
+                }
+              },
+              {
+                "name": "minerReward",
+                "using": {
+                  "foreign_key_constraint_on": "miner_reward_id"
+                }
+              },
+              {
+                "name": "errorEvent",
+                "using": {
+                  "foreign_key_constraint_on": "error_event_id"
+                }
+              },
+              {
+                "name": "highSecuritySet",
+                "using": {
+                  "foreign_key_constraint_on": "high_security_set_id"
+                }
+              },
+              {
+                "name": "multisig",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_id"
+                }
+              },
+              {
+                "name": "multisigProposalCreated",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_proposal_created_id"
+                }
+              },
+              {
+                "name": "multisigSignerApproved",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_signer_approved_id"
+                }
+              },
+              {
+                "name": "multisigProposalReady",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_proposal_ready_id"
+                }
+              },
+              {
+                "name": "executedMultisigProposal",
+                "using": {
+                  "foreign_key_constraint_on": "executed_multisig_proposal_id"
+                }
+              },
+              {
+                "name": "cancelledMultisigProposal",
+                "using": {
+                  "foreign_key_constraint_on": "cancelled_multisig_proposal_id"
+                }
+              },
+              {
+                "name": "removedMultisigProposal",
+                "using": {
+                  "foreign_key_constraint_on": "removed_multisig_proposal_id"
+                }
+              },
+              {
+                "name": "multisigDepositsClaimed",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_deposits_claimed_id"
+                }
+              },
+              {
+                "name": "techReferendumEvent",
+                "using": {
+                  "foreign_key_constraint_on": "tech_referendum_event_id"
+                }
+              },
+              {
+                "name": "runtimeUpgrade",
+                "using": {
+                  "foreign_key_constraint_on": "runtime_upgrade_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "block",
+              "schema": "public"
+            },
+            "array_relationships": [
+              {
+                "name": "extrinsics",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "block_id",
+                    "table": {
+                      "name": "extrinsic",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "events",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "block_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "transactions",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "block_id",
+                    "table": {
+                      "name": "transfer",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "object_relationships": [
+              {
+                "name": "minedBy",
+                "using": {
+                  "foreign_key_constraint_on": "mined_by_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "transfer",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "executedBy",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "executed_transfer_id",
+                    "table": {
+                      "name": "executed_reversible_transfer",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "event",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "transfer_id",
+                    "table": {
+                      "name": "event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              },
+              {
+                "name": "from",
+                "using": {
+                  "foreign_key_constraint_on": "from_id"
+                }
+              },
+              {
+                "name": "to",
+                "using": {
+                  "foreign_key_constraint_on": "to_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "account_event",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "account",
+                "using": {
+                  "foreign_key_constraint_on": "account_id"
+                }
+              },
+              {
+                "name": "transfer",
+                "using": {
+                  "foreign_key_constraint_on": "transfer_id"
+                }
+              },
+              {
+                "name": "scheduledReversibleTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "scheduled_reversible_transfer_id"
+                }
+              },
+              {
+                "name": "executedReversibleTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "executed_reversible_transfer_id"
+                }
+              },
+              {
+                "name": "cancelledReversibleTransfer",
+                "using": {
+                  "foreign_key_constraint_on": "cancelled_reversible_transfer_id"
+                }
+              },
+              {
+                "name": "minerReward",
+                "using": {
+                  "foreign_key_constraint_on": "miner_reward_id"
+                }
+              },
+              {
+                "name": "highSecuritySet",
+                "using": {
+                  "foreign_key_constraint_on": "high_security_set_id"
+                }
+              },
+              {
+                "name": "multisig",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_id"
+                }
+              },
+              {
+                "name": "multisigProposalCreated",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_proposal_created_id"
+                }
+              },
+              {
+                "name": "multisigSignerApproved",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_signer_approved_id"
+                }
+              },
+              {
+                "name": "multisigProposalReady",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_proposal_ready_id"
+                }
+              },
+              {
+                "name": "executedMultisigProposal",
+                "using": {
+                  "foreign_key_constraint_on": "executed_multisig_proposal_id"
+                }
+              },
+              {
+                "name": "cancelledMultisigProposal",
+                "using": {
+                  "foreign_key_constraint_on": "cancelled_multisig_proposal_id"
+                }
+              },
+              {
+                "name": "removedMultisigProposal",
+                "using": {
+                  "foreign_key_constraint_on": "removed_multisig_proposal_id"
+                }
+              },
+              {
+                "name": "multisigDepositsClaimed",
+                "using": {
+                  "foreign_key_constraint_on": "multisig_deposits_claimed_id"
+                }
+              },
+              {
+                "name": "techReferendumEvent",
+                "using": {
+                  "foreign_key_constraint_on": "tech_referendum_event_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "account",
+              "schema": "public"
+            },
+            "array_relationships": [
+              {
+                "name": "extrinsics",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "signer_id",
+                    "table": {
+                      "name": "extrinsic",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "minedBlocks",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "mined_by_id",
+                    "table": {
+                      "name": "block",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "transfersFrom",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "from_id",
+                    "table": {
+                      "name": "transfer",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "transfersTo",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "to_id",
+                    "table": {
+                      "name": "transfer",
+                      "schema": "public"
+                    }
+                  }
+                }
+              },
+              {
+                "name": "accountEvents",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "account_id",
+                    "table": {
+                      "name": "account_event",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "wormhole_output",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "wormholeExtrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "wormhole_extrinsic_id"
+                }
+              },
+              {
+                "name": "exitAccount",
+                "using": {
+                  "foreign_key_constraint_on": "exit_account_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "wormhole_extrinsic",
+              "schema": "public"
+            },
+            "array_relationships": [
+              {
+                "name": "outputs",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "wormhole_extrinsic_id",
+                    "table": {
+                      "name": "wormhole_output",
+                      "schema": "public"
+                    }
+                  }
+                }
+              }
+            ],
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "extrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "extrinsic_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "wormhole_nullifier",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "wormholeExtrinsic",
+                "using": {
+                  "foreign_key_constraint_on": "wormhole_extrinsic_id"
+                }
+              },
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "deposit_pool_stats",
+              "schema": "public"
+            },
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "chain_stats",
+              "schema": "public"
+            },
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "daily_chain_stats",
+              "schema": "public"
+            },
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "daily_active_account",
+              "schema": "public"
+            },
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "account_stats",
+              "schema": "public"
+            },
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "unified_transaction",
+              "schema": "public"
+            },
+            "object_relationships": [
+              {
+                "name": "block",
+                "using": {
+                  "foreign_key_constraint_on": "block_id"
+                }
+              },
+              {
+                "name": "from",
+                "using": {
+                  "foreign_key_constraint_on": "from_id"
+                }
+              },
+              {
+                "name": "to",
+                "using": {
+                  "foreign_key_constraint_on": "to_id"
+                }
+              }
+            ],
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "name": "vesting_schedule",
+              "schema": "public"
+            },
+            "select_permissions": [
+              {
+                "role": "public",
+                "permission": {
+                  "columns": "*",
+                  "filter": {},
+                  "allow_aggregations": true,
+                  "limit": 1000
+                }
+              }
+            ]
+          }
+        ],
+        "configuration": {
+          "connection_info": {
+            "database_url": {
+              "from_env": "HASURA_GRAPHQL_DATABASE_URL"
+            },
+            "isolation_level": "read-committed",
+            "pool_settings": {
+              "connection_lifetime": 600,
+              "idle_timeout": 180,
+              "max_connections": 50,
+              "retries": 1
+            },
+            "use_prepared_statements": true
+          }
+        }
+      }
+    ]
+  }
+}

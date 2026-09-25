@@ -1,0 +1,7 @@
+export * as system from './system/events'
+export * as balances from './balances/events'
+export * as miningRewards from './mining-rewards/events'
+export * as reversibleTransfers from './reversible-transfers/events'
+export * as techReferenda from './tech-referenda/events'
+export * as multisig from './multisig/events'
+export * as wormhole from './wormhole/events'

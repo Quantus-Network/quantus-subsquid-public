@@ -1,0 +1,63 @@
+# Simple docker-compose for local development
+# Usage: docker-compose -f docker-compose-dev.yml up -d
+services:
+    db:
+        image: postgres:15
+        environment:
+            POSTGRES_DB: ${DB_NAME}
+            POSTGRES_USER: ${DB_USER}
+            POSTGRES_PASSWORD: ${DB_PASS}
+        shm_size: 1gb
+        ports:
+            - "${DB_PORT}:5432"
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        command: >
+            postgres
+            -c log_min_duration_statement=200
+            -c statement_timeout=5000
+            -c idle_in_transaction_session_timeout=30000
+            -c shared_buffers=${DB_SHARED_BUFFERS:-256MB}
+            -c effective_cache_size=${DB_EFFECTIVE_CACHE_SIZE:-768MB}
+            -c work_mem=${DB_WORK_MEM:-8MB}
+    graphql:
+        image: hasura/graphql-engine:v2.48.16
+        ports:
+            - "${GQL_PORT}:8080"
+        depends_on:
+            db:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        environment:
+            HASURA_GRAPHQL_DATABASE_URL: "postgres://${DB_USER}:${DB_PASS}@db:5432/${DB_NAME}"
+            HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES: true
+            HASURA_GRAPHQL_ENABLE_SUBSCRIPTIONS: true
+            HASURA_GRAPHQL_ENABLE_CONSOLE: true
+            HASURA_GRAPHQL_DEV_MODE: true
+            HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup,http-log,webhook-log,websocket-log,query-log
+            HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
+            HASURA_GRAPHQL_UNAUTHORIZED_ROLE: ${HASURA_GRAPHQL_UNAUTHORIZED_ROLE}
+            HASURA_GRAPHQL_PG_CONNECTIONS: ${HASURA_PG_CONNECTIONS:-10}
+    chain-node:
+        image: quantus-node-local:latest
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9944/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        ports:
+            - "30333:30333"   # p2p
+            - "9944:9944"    # rpc (adjust if different)
+            - "9616:9616"    # prometheus (adjust if different)
+        command:
+            - "--dev"
+            - "--unsafe-rpc-external"
+            - "--rpc-cors=all"

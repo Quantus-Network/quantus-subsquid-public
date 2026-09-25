@@ -1,0 +1,22 @@
+{
+  "name": "subsquid-monitor",
+  "version": "1.0.0",
+  "description": "Standalone monitor script for Subsquid processor",
+  "main": "monitor.js",
+  "scripts": {
+    "start": "node --require=dotenv/config monitor.js",
+    "dev": "ts-node --require=dotenv/config monitor.ts",
+    "build": "tsc monitor.ts --outDir . --target es2020 --module commonjs --esModuleInterop"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

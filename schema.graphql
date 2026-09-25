@@ -1,0 +1,681 @@
+type Account @entity {
+    "Account address"
+    id: ID!
+    free: BigInt! @index
+    reserved: BigInt! @index
+    frozen: BigInt! @index
+    "Block number of last update. Indexed: default sort of the explorer account listing."
+    lastUpdated: Int! @index
+    "Whether this account has only received transfers (never sent). Used for deposit pool tracking."
+    isDepositOnly: Boolean! @index
+    "Individual privacy deposit amounts (JSON array of token-unit strings). Cleared when account sends."
+    privacyDeposits: String!
+    "True once this account was the `who` of a HighSecuritySet event (denormalized for the account listing)."
+    isHighSecurity: Boolean!
+    "True once this account was the guardian of a HighSecuritySet event (denormalized for the account listing)."
+    isGuardian: Boolean!
+    "True when this address is a Multisig account (denormalized for the account listing)."
+    isMultisig: Boolean!
+    transfersTo: [Transfer!] @derivedFrom(field: "to")
+    transfersFrom: [Transfer!] @derivedFrom(field: "from")
+    "Extrinsics signed by this account"
+    extrinsics: [Extrinsic!] @derivedFrom(field: "signer")
+    "Blocks mined by this account"
+    minedBlocks: [Block!] @derivedFrom(field: "minedBy")
+    accountEvents: [AccountEvent!] @derivedFrom(field: "account")
+}
+
+"An extrinsic (transaction) submitted to the chain"
+type Extrinsic @entity {
+    "Extrinsic hash"
+    id: ID!
+    block: Block!
+    "Index of the extrinsic within the block"
+    indexInBlock: Int! @index
+    timestamp: DateTime! @index
+    "Account that signed and submitted the extrinsic (null for unsigned extrinsics like wormhole proofs)"
+    signer: Account
+    "Pallet name (e.g., 'Balances', 'ReversibleTransfers')"
+    pallet: String! @index
+    "Call name (e.g., 'transfer', 'transfer_keep_alive')"
+    call: String! @index
+    "Decoded call arguments as JSON"
+    args: String!
+    "Whether the extrinsic succeeded"
+    success: Boolean! @index
+    "Transaction fee paid"
+    fee: BigInt!
+    "Events emitted by this extrinsic"
+    events: [Event!] @derivedFrom(field: "extrinsic")
+}
+
+enum EventType {
+    TRANSFER
+    SCHEDULED_REVERSIBLE_TRANSFER
+    EXECUTED_REVERSIBLE_TRANSFER
+    CANCELLED_REVERSIBLE_TRANSFER
+    MINER_REWARD
+    ERROR
+    HIGH_SECURITY_SET
+    MULTISIG_CREATED
+    MULTISIG_PROPOSAL_CREATED
+    MULTISIG_SIGNER_APPROVED
+    MULTISIG_PROPOSAL_READY
+    MULTISIG_PROPOSAL_EXECUTED
+    MULTISIG_PROPOSAL_CANCELLED
+    MULTISIG_PROPOSAL_REMOVED
+    MULTISIG_DEPOSITS_CLAIMED
+    TECH_REFERENDUM
+    RUNTIME_UPGRADE
+}
+
+enum MultisigProposalStatus {
+    ACTIVE
+    APPROVED
+    EXECUTED
+    CANCELLED
+    REMOVED
+}
+
+"Kind of a single lifecycle event in a technical referendum's history"
+enum TechReferendumEventType {
+    SUBMITTED
+    DECISION_STARTED
+    CONFIRM_STARTED
+    CONFIRM_ABORTED
+    CONFIRMED
+    APPROVED
+    REJECTED
+    TIMED_OUT
+    CANCELLED
+    KILLED
+}
+
+type Event @entity {
+    id: ID!
+    type: EventType! @index
+    block: Block!
+    timestamp: DateTime! @index
+    "Link to the extrinsic that emitted this event (null for inherent events like miner rewards)"
+    extrinsic: Extrinsic
+    # Polymorphic references - only one will be set based on type (unique relationships)
+    transfer: Transfer @unique
+    scheduledReversibleTransfer: ScheduledReversibleTransfer @unique
+    executedReversibleTransfer: ExecutedReversibleTransfer @unique
+    cancelledReversibleTransfer: CancelledReversibleTransfer @unique
+    minerReward: MinerReward @unique
+    errorEvent: ErrorEvent @unique
+    highSecuritySet: HighSecuritySet @unique
+    multisig: Multisig @unique
+    multisigProposalCreated: MultisigProposalCreated @unique
+    multisigSignerApproved: MultisigSignerApproved @unique
+    multisigProposalReady: MultisigProposalReady @unique
+    executedMultisigProposal: ExecutedMultisigProposal @unique
+    cancelledMultisigProposal: CancelledMultisigProposal @unique
+    removedMultisigProposal: RemovedMultisigProposal @unique
+    multisigDepositsClaimed: MultisigDepositsClaimed @unique
+    techReferendumEvent: TechReferendumEvent @unique
+    runtimeUpgrade: RuntimeUpgrade @unique
+}
+
+type Block @entity {
+    id: ID!
+    height: Int! @index
+    hash: String! @index
+    timestamp: DateTime! @index
+    "Miner payouts on this block, plus any historical treasury share. Transaction fees are already inside the miner payout."
+    reward: BigInt!
+    "Account that mined this block (null when no miner reward was emitted)"
+    minedBy: Account @index
+    # All events in this block
+    events: [Event!] @derivedFrom(field: "block")
+    # All extrinsics in this block
+    extrinsics: [Extrinsic!] @derivedFrom(field: "block")
+    # Keep transactions for backward compatibility
+    transactions: [Transfer!] @derivedFrom(field: "block")
+}
+
+type Transfer
+    @entity
+    @index(fields: ["from", "timestamp"])
+    @index(fields: ["to", "timestamp"])
+    @index(fields: ["to", "blockHeight", "id"]) {
+    id: ID!
+    block: Block!
+    "Denormalized block.height so recipient walks can filter and keyset-paginate without joining block"
+    blockHeight: Int!
+    timestamp: DateTime! @index
+    "Link to the extrinsic that caused this transfer (null for transfers from reversible execution)"
+    extrinsic: Extrinsic
+    from: Account!
+    to: Account!
+    amount: BigInt! @index
+    fee: BigInt! # fee is calculated at the best effort and may be zero for some old extrinsics
+    "Blake3 hash of raw 'from' address bytes (hex string) for privacy-preserving prefix queries"
+    fromHash: String! @index
+    "Blake3 hash of raw 'to' address bytes (hex string) for privacy-preserving prefix queries"
+    toHash: String! @index
+    transferCount: BigInt! @index
+    "Index in the ZK trie for Merkle proof generation"
+    leafIndex: BigInt! @index
+    executedBy: ExecutedReversibleTransfer @derivedFrom(field: "executedTransfer")
+    event: Event @derivedFrom(field: "transfer")
+}
+
+type ScheduledReversibleTransfer @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    "Link to the extrinsic that scheduled this transfer"
+    extrinsic: Extrinsic
+    from: Account!
+    to: Account!
+    amount: BigInt!
+    fee: BigInt!
+    txId: String! @index
+    scheduledAt: DateTime! @index
+    event: Event @derivedFrom(field: "scheduledReversibleTransfer")
+}
+
+type ExecutedReversibleTransfer @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    txId: String! @index
+    scheduledTransfer: ScheduledReversibleTransfer!
+    executedTransfer: Transfer @unique
+    event: Event @derivedFrom(field: "executedReversibleTransfer")
+}
+
+type CancelledReversibleTransfer @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    txId: String! @index
+    cancelledBy: Account!
+    scheduledTransfer: ScheduledReversibleTransfer!
+    event: Event @derivedFrom(field: "cancelledReversibleTransfer")
+}
+
+type MinerReward @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    miner: Account!
+    reward: BigInt!
+    event: Event @derivedFrom(field: "minerReward")
+}
+
+type ErrorEvent @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    "Link to the extrinsic that failed"
+    extrinsic: Extrinsic
+    errorType: String! @index
+    errorModule: String @index
+    errorName: String @index
+    errorDocs: String
+    event: Event @derivedFrom(field: "errorEvent")
+}
+
+"""
+One row per (account, event) so a wallet can page an account's history from a
+single table. Only transfers with an extrinsic are recorded here; mint and
+reversible-settlement leaves are excluded (wallets show those via MinerReward /
+ExecutedReversibleTransfer rows instead).
+"""
+type AccountEvent
+    @entity
+    @index(fields: ["account", "timestamp", "id"])
+    @index(fields: ["account", "outgoing", "timestamp", "id"])
+    @index(fields: ["account", "incoming", "timestamp", "id"]) {
+    id: ID!
+    account: Account! @index
+    timestamp: DateTime! @index
+    "True when `account` is the party that sent / initiated this event (sender, proposer, approver, ...)"
+    outgoing: Boolean!
+    "True when `account` is the party that received value in this event (recipient, miner)"
+    incoming: Boolean!
+    transfer: Transfer
+    scheduledReversibleTransfer: ScheduledReversibleTransfer
+    executedReversibleTransfer: ExecutedReversibleTransfer
+    cancelledReversibleTransfer: CancelledReversibleTransfer
+    minerReward: MinerReward
+    highSecuritySet: HighSecuritySet
+    multisig: Multisig
+    multisigProposalCreated: MultisigProposalCreated
+    multisigSignerApproved: MultisigSignerApproved
+    multisigProposalReady: MultisigProposalReady
+    executedMultisigProposal: ExecutedMultisigProposal
+    cancelledMultisigProposal: CancelledMultisigProposal
+    removedMultisigProposal: RemovedMultisigProposal
+    multisigDepositsClaimed: MultisigDepositsClaimed
+    techReferendumEvent: TechReferendumEvent
+}
+
+type Multisig @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    creator: Account!
+    threshold: Int!
+    nonce: BigInt!
+    "Sorted signer SS58 addresses (Postgres text[], use GIN index for membership queries)"
+    signers: [String!]!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "multisig")
+}
+
+"Historical proposal record; persisted after on-chain storage is cleared"
+type MultisigProposal @entity {
+    id: ID!
+    "Block when the proposal was first created on-chain"
+    createdAtBlock: Block!
+    createdAt: DateTime! @index
+    updatedAt: DateTime! @index
+    createdExtrinsic: Extrinsic
+    multisig: Multisig! @index
+    proposalId: Int! @index
+    proposer: Account!
+    "Raw encoded call bytes as hex"
+    callRaw: String!
+    "Pallet name (e.g., 'Balances', 'ReversibleTransfers')"
+    pallet: String! @index
+    "Call name (e.g., 'transfer_keep_alive', 'set_high_security')"
+    call: String! @index
+    "Balances transfer recipient"
+    transferTo: Account
+    "Balances transfer amount in token units"
+    transferAmount: BigInt @index
+    "ReversibleTransfers schedule recipient"
+    scheduleTo: Account
+    "ReversibleTransfers schedule amount in token units"
+    scheduleAmount: BigInt
+    "ReversibleTransfers schedule asset id"
+    scheduleAssetId: Int
+    "ReversibleTransfers delay kind: BlockNumber or Timestamp"
+    delayKind: String
+    "ReversibleTransfers delay value (blocks or milliseconds)"
+    delayValue: BigInt
+    "ReversibleTransfers cancel/execute tx id (hex)"
+    txId: String @index
+    "ReversibleTransfers recover_funds account"
+    recoverAccount: Account
+    "ReversibleTransfers set_high_security guardian"
+    guardian: Account
+    "Set when call bytes could not be decoded"
+    decodeError: String
+    "Block height after which the proposal expires (not a duration)"
+    expiryBlock: Int! @index
+    deposit: BigInt!
+    "Non-refundable ProposalFee burned at creation (scales with signer count)"
+    burnedPalletFee: BigInt!
+    "TransactionPayment fee on the propose extrinsic"
+    creationNetworkFee: BigInt!
+    "Approver SS58 addresses (Postgres text[])"
+    approvals: [String!]!
+    status: MultisigProposalStatus! @index
+}
+
+"Chain event emitted when a proposal is created"
+type MultisigProposalCreated @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    proposal: MultisigProposal!
+    "Refundable ProposalDeposit locked at creation"
+    deposit: BigInt!
+    "Non-refundable ProposalFee burned at creation"
+    burnedPalletFee: BigInt!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "multisigProposalCreated")
+}
+
+type MultisigSignerApproved @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    proposal: MultisigProposal!
+    approver: Account!
+    approvalsCount: Int!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "multisigSignerApproved")
+}
+
+type MultisigProposalReady @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    proposal: MultisigProposal!
+    approvalsCount: Int!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "multisigProposalReady")
+}
+
+type ExecutedMultisigProposal @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    proposal: MultisigProposal!
+    "Final approver SS58 addresses at execution (Postgres text[])"
+    approvers: [String!]!
+    "Execution result: Ok or encoded DispatchError"
+    result: String!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "executedMultisigProposal")
+}
+
+type CancelledMultisigProposal @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    proposal: MultisigProposal!
+    cancelledBy: Account!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "cancelledMultisigProposal")
+}
+
+type RemovedMultisigProposal @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    proposal: MultisigProposal!
+    removedBy: Account!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "removedMultisigProposal")
+}
+
+type MultisigDepositsClaimed @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    multisig: Multisig! @index
+    claimer: Account!
+    totalReturned: BigInt!
+    proposalsRemoved: Int!
+    "best-effort and may be zero for some extrinsics"
+    fee: BigInt!
+    event: Event @derivedFrom(field: "multisigDepositsClaimed")
+}
+
+type HighSecuritySet @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    "Link to the extrinsic that set high security"
+    extrinsic: Extrinsic
+    who: Account!
+    guardian: Account!
+    delay: BigInt!
+    event: Event @derivedFrom(field: "highSecuritySet")
+}
+
+"A single wormhole proof verification extrinsic, containing one or more exit outputs."
+type WormholeExtrinsic @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    "Link to the generic Extrinsic entity"
+    extrinsic: Extrinsic
+    "Total amount across all outputs in this extrinsic"
+    totalAmount: BigInt! @index
+    "Number of non-zero exit outputs"
+    outputCount: Int!
+    "Individual exit outputs in this extrinsic"
+    outputs: [WormholeOutput!]! @derivedFrom(field: "wormholeExtrinsic")
+    "Privacy score at 0.01 DEV precision, in bits"
+    privacyScore: Float!
+    "Privacy score with 0.1% sacrifice, in bits"
+    privacyScore01Pct: Float!
+    "Privacy score with 1% sacrifice, in bits"
+    privacyScore1Pct: Float!
+    "Privacy score with 5% sacrifice, in bits"
+    privacyScore5Pct: Float!
+    "Human-readable privacy label"
+    privacyLabel: String!
+    "Pool snapshot at time of proof verification (JSON bucket data)"
+    poolSnapshot: String!
+}
+
+"An individual exit output within a wormhole proof verification."
+type WormholeOutput @entity {
+    id: ID!
+    wormholeExtrinsic: WormholeExtrinsic!
+    exitAccount: Account!
+    amount: BigInt! @index
+}
+
+"A nullifier consumed by a wormhole proof verification."
+type WormholeNullifier @entity {
+    id: ID!
+    "The nullifier bytes as hex"
+    nullifier: String! @index
+    "Blake3 hash of the nullifier for prefix queries"
+    nullifierHash: String! @index
+    "The wormhole extrinsic that consumed this nullifier"
+    wormholeExtrinsic: WormholeExtrinsic!
+    "Block where the nullifier was consumed"
+    block: Block!
+    timestamp: DateTime! @index
+}
+
+"Bucketed deposit pool statistics for privacy score computation. Each bucket covers a bounded range of deposit amounts with overlapping ranges growing by factor 4."
+type DepositPoolStats @entity {
+    "Singleton entity (id='global')"
+    id: ID!
+    "Block number of last update"
+    lastUpdatedBlock: Int!
+    "Bucket definitions and stats as JSON. Each bucket has: lo, hi (token units), count, sumAmounts, sumAmountsSquared"
+    buckets: String!
+}
+
+"""
+A single technical-referendum lifecycle event (submission, decision, approval, rejection, etc.).
+Each event is self-contained: it carries the referendum index it belongs to plus a snapshot of
+what the proposal is about and who proposed it, so the full runtime-upgrade history can be read
+directly from the chronological stream of these events.
+"""
+type TechReferendumEvent @entity {
+    id: ID!
+    "Index of the referendum this event belongs to"
+    referendumIndex: Int! @index
+    type: TechReferendumEventType! @index
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    "Account that triggered this event (the submitter for SUBMITTED); null for system-driven transitions"
+    actor: Account
+    "Governance track id"
+    track: Int @index
+    "Human-readable track name (e.g. 'whitelisted_caller')"
+    trackName: String
+    "Humanized dispatch origin (e.g. 'Root', 'Signed (...)')"
+    origin: String
+    "Off-chain metadata title, if available"
+    title: String
+    "Off-chain metadata description, if available"
+    description: String
+    "Human-readable summary of what the proposal does"
+    proposalSummary: String
+    "Preimage storage kind: INLINE | LOOKUP | LEGACY"
+    proposalStorage: String
+    "Preimage hash when the proposal is stored by lookup/legacy"
+    proposalPreimageHash: String
+    "Encoded proposal size in bytes"
+    proposalSizeBytes: Int
+    "Decoded calls as a JSON array (name, pallet, method, summary, category)"
+    proposalCalls: String
+    "True when the proposal contains a runtime upgrade call (System.set_code / authorize_upgrade)"
+    isRuntimeUpgrade: Boolean! @index
+    "Aye votes captured with this event (when the event carries a tally)"
+    tallyAyes: BigInt
+    "Nay votes captured with this event"
+    tallyNays: BigInt
+    "Bare aye votes (count of aye voters) captured with this event"
+    tallyBareAyes: BigInt
+    event: Event @derivedFrom(field: "techReferendumEvent")
+}
+
+"A runtime upgrade applied on-chain, emitted as System.CodeUpdated"
+type RuntimeUpgrade @entity {
+    id: ID!
+    block: Block!
+    timestamp: DateTime! @index
+    extrinsic: Extrinsic
+    "Runtime spec version in effect after the upgrade"
+    specVersion: Int @index
+    event: Event @derivedFrom(field: "runtimeUpgrade")
+}
+
+type ChainStats @entity {
+    "Singleton entity (id='global')"
+    id: ID!
+    blockHeight: Int!
+    finalizedBlockHeight: Int!
+    totalAccounts: Int!
+    totalMiners: Int!
+    totalDepositAccounts: Int!
+    totalImmediateTransfers: Int!
+    totalScheduledTransfers: Int!
+    totalExecutedTransfers: Int!
+    totalCancelledTransfers: Int!
+    totalHighSecuritySets: Int!
+    totalMultisigsCreated: Int!
+    totalMultisigProposals: Int!
+    totalMultisigSignerApproved: Int!
+    totalMultisigProposalReady: Int!
+    totalMultisigProposalsExecuted: Int!
+    totalMultisigProposalsCancelled: Int!
+    totalMultisigProposalsRemoved: Int!
+    totalMultisigDepositsClaimed: Int!
+    totalMinerRewards: Int!
+    totalErrorEvents: Int!
+    totalTechReferenda: Int!
+    totalRuntimeUpgrades: Int!
+    "MiningRewards.MaxSupply at blockHeight, as a raw token amount"
+    maxSupply: BigInt!
+    "Balances.TotalIssuance at blockHeight, as a raw token amount"
+    totalSupply: BigInt!
+    "Total supply minus still-locked vesting at blockHeight, as a raw token amount. Unlocked token counts whether or not it has been claimed."
+    circulatingSupply: BigInt!
+}
+
+"UTC calendar-day rollup for explorer home chart (id = YYYY-MM-DD)"
+type DailyChainStats @entity {
+    "UTC date key YYYY-MM-DD"
+    id: ID!
+    "Start of the UTC day (00:00:00.000Z)"
+    date: DateTime! @index
+    blocksCount: Int!
+    "Unified transactions excluding hashless IMMEDIATE rewards"
+    txCount: Int!
+    "Distinct accounts that signed at least one extrinsic on this UTC day"
+    activeAccounts: Int!
+}
+
+"Per-UTC-day account activity (id = YYYY-MM-DD:{address}). Backs DailyChainStats.activeAccounts and the explorer's 7-day active / deposit account counts."
+type DailyActiveAccount @entity {
+    "Composite key: YYYY-MM-DD:{accountAddress}"
+    id: ID!
+    "Start of the UTC day (00:00:00.000Z)"
+    date: DateTime! @index
+    "Account address"
+    accountId: String!
+    "Signed at least one extrinsic on this day"
+    signed: Boolean!
+    "Was Transfer.from on at least one transfer this day (any transfer row, including hashless ones)"
+    sent: Boolean!
+    "Was Transfer.to on at least one transfer this day (any transfer row, including hashless ones)"
+    received: Boolean!
+}
+
+"Transfers in this account stats were a party to (sender or receiver or cancelled by)"
+type AccountStats @entity {
+    "Account address"
+    id: ID!
+    totalImmediateTransfers: Int!
+    totalScheduledTransfers: Int!
+    totalExecutedTransfers: Int!
+    totalCancelledTransfers: Int!
+    totalMinedBlocks: Int! @index
+    totalRewards: BigInt!
+}
+
+enum UnifiedTransactionType {
+    IMMEDIATE
+    SCHEDULED_REVERSIBLE
+    EXECUTED_REVERSIBLE
+    CANCELLED_REVERSIBLE
+    WORMHOLE
+}
+
+enum UnifiedTransactionStatus {
+    SUCCESS
+    ERROR
+    SCHEDULED
+    EXECUTED
+    CANCELLED
+}
+
+"Denormalized explorer list row for fast global/account offset pagination"
+type UnifiedTransaction
+    @entity
+    @index(fields: ["timestamp"])
+    @index(fields: ["type", "timestamp"])
+    @index(fields: ["from", "timestamp"])
+    @index(fields: ["to", "timestamp"]) {
+    "Prefixed stable key: immediate:{id}, scheduled-reversible:{id}, executed-reversible:{id}, cancelled-reversible:{id}, wormhole:{id}"
+    id: ID!
+    type: UnifiedTransactionType! @index
+    "Extrinsic hash / id; null for unsigned executed-reversible"
+    hash: String @index
+    block: Block!
+    blockHeight: Int! @index
+    timestamp: DateTime! @index
+    from: Account
+    to: Account
+    amount: BigInt
+    fee: BigInt
+    status: UnifiedTransactionStatus! @index
+    "Detail routing: transfer id, reversible txId, or wormhole extrinsic id"
+    detailId: String! @index
+}
+
+"Current vesting schedule read from Vesting.Schedules"
+type VestingSchedule @entity {
+    "Schedule id"
+    id: ID!
+    "Beneficiary address"
+    beneficiary: String! @index
+    "When linear accrual starts, as unix milliseconds"
+    start: BigInt!
+    "Nothing is unlocked before this unix millisecond"
+    cliff: BigInt!
+    "When the full total is unlocked, as unix milliseconds"
+    end: BigInt!
+    "Total grant, as a raw token amount"
+    total: BigInt!
+    "Amount already paid out, as a raw token amount"
+    claimed: BigInt!
+    "Unix milliseconds of the last payout"
+    lastClaimAt: BigInt
+    "Block height of the storage read that wrote this row"
+    blockHeight: Int! @index
+}

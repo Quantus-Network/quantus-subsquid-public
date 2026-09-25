@@ -1,0 +1,18 @@
+node_modules
+lib
+builds
+.last_deployed
+.chain-node-next.state
+
+/**Versions.json
+/**Versions.jsonl
+
+# IDE files
+/.idea
+.env
+/cert
+
+chain-node-data
+chain-node-data-next
+
+.cursor

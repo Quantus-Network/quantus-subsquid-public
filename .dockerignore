@@ -1,0 +1,6 @@
+/.git
+/node_modules
+/*Versions.jsonl
+/dist
+/lib
+/npm-debug.log

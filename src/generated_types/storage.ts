@@ -1,0 +1,7 @@
+export * as system from './system/storage'
+export * as balances from './balances/storage'
+export * as preimage from './preimage/storage'
+export * as reversibleTransfers from './reversible-transfers/storage'
+export * as techReferenda from './tech-referenda/storage'
+export * as multisig from './multisig/storage'
+export * as vesting from './vesting/storage'

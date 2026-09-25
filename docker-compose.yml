@@ -1,0 +1,296 @@
+services:
+    # Blue Environment
+    blue-db:
+        image: postgres:${POSTGRES_VERSION:-15}
+        environment:
+            POSTGRES_DB: ${DB_NAME}
+            POSTGRES_USER: ${DB_USER}
+            POSTGRES_PASSWORD: ${DB_PASS}
+        shm_size: ${DB_SHM_SIZE:-1gb}
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        command: >
+            postgres
+            -c statement_timeout=5000
+            -c idle_in_transaction_session_timeout=30000
+            -c shared_buffers=${DB_SHARED_BUFFERS:-256MB}
+            -c effective_cache_size=${DB_EFFECTIVE_CACHE_SIZE:-768MB}
+            -c work_mem=${DB_WORK_MEM:-8MB}
+        ports:
+            - "${BLUE_DB_PORT}:5432"
+        restart: "unless-stopped"
+        networks:
+            - blue-green-network
+    
+    blue-migration:
+        image: ${IMAGE_NAME}:${BLUE_IMAGE_TAG}
+        environment:
+            - DB_HOST=${BLUE_DB_HOST}
+            - DB_PORT=5432
+            - DB_NAME=${DB_NAME}
+            - DB_USER=${DB_USER}
+            - DB_PASS=${DB_PASS}
+            - NODE_ENV=${NODE_ENV}
+            - HASURA_GRAPHQL_ENDPOINT=${BLUE_HASURA_GRAPHQL_ENDPOINT}
+            - HASURA_GRAPHQL_ADMIN_SECRET=${HASURA_GRAPHQL_ADMIN_SECRET}
+        command: ["sh", "-c", "npx squid-typeorm-migration apply && npx squid-hasura-configuration apply"]
+        depends_on:
+            blue-db:
+                condition: service_healthy
+            blue-graphql:
+                condition: service_healthy
+        restart: "no"
+        networks:
+            - blue-green-network
+
+    blue-graphql:
+        image: hasura/graphql-engine:v2.48.16
+        ports:
+            - "${BLUE_GQL_PORT}:8080"
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        depends_on:
+            blue-db:
+                condition: service_healthy
+        environment:
+            HASURA_GRAPHQL_DATABASE_URL: "postgres://${DB_USER}:${DB_PASS}@${BLUE_DB_HOST}:5432/${DB_NAME}"
+            HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES: true
+            HASURA_GRAPHQL_ENABLE_SUBSCRIPTIONS: false
+            HASURA_GRAPHQL_ENABLE_CONSOLE: true
+            HASURA_GRAPHQL_DEV_MODE: false
+            HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup,http-log,webhook-log,websocket-log,query-log
+            HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
+            HASURA_GRAPHQL_UNAUTHORIZED_ROLE: ${HASURA_GRAPHQL_UNAUTHORIZED_ROLE}
+            HASURA_GRAPHQL_PG_CONNECTIONS: ${HASURA_PG_CONNECTIONS:-10}
+        restart: "unless-stopped"
+        networks:
+            - blue-green-network
+
+    blue-processor:
+        image: ${IMAGE_NAME}:${BLUE_IMAGE_TAG}
+        environment:
+            - DB_HOST=${BLUE_DB_HOST}
+            - DB_PORT=5432
+            - START_BLOCK=${START_BLOCK}
+            # Per-color RPC endpoint. Defaults to the shared RPC_ENDPOINT (the
+            # canonical chain-node). During a boot-node deployment the script
+            # overrides BLUE_RPC_ENDPOINT so this env points at chain-node-next.
+            - RPC_ENDPOINT=${BLUE_RPC_ENDPOINT:-${RPC_ENDPOINT}}
+            - DB_NAME=${DB_NAME}
+            - GQL_PORT=${GQL_PORT}
+            - DB_USER=${DB_USER}
+            - DB_PASS=${DB_PASS}
+            - NODE_ENV=${NODE_ENV}
+            - DEPLOYMENT_COLOR=blue
+            - PROMETHEUS_PORT=${PUBLIC_PORT_METRICS:-9090} 
+        ports:
+            - "${BLUE_METRICS_PORT}:3000"
+        command: ["node", "lib/main.js"]
+        depends_on:
+            blue-db:
+                condition: service_healthy
+            blue-migration:
+                condition: service_completed_successfully
+            chain-node:
+                condition: service_healthy
+        restart: "unless-stopped"
+        networks:
+            - blue-green-network
+
+    # GREEN Environment
+    green-db:
+        image: postgres:${POSTGRES_VERSION:-15}
+        environment:
+            POSTGRES_DB: ${DB_NAME}
+            POSTGRES_USER: ${DB_USER}
+            POSTGRES_PASSWORD: ${DB_PASS}
+        shm_size: ${DB_SHM_SIZE:-1gb}
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        command: >
+            postgres
+            -c statement_timeout=5000
+            -c idle_in_transaction_session_timeout=30000
+            -c shared_buffers=${DB_SHARED_BUFFERS:-256MB}
+            -c effective_cache_size=${DB_EFFECTIVE_CACHE_SIZE:-768MB}
+            -c work_mem=${DB_WORK_MEM:-8MB}
+        ports:
+            - "${GREEN_DB_PORT}:5432"
+        restart: "unless-stopped"
+        networks:
+            - blue-green-network
+
+    green-migration:
+        image: ${IMAGE_NAME}:${GREEN_IMAGE_TAG}
+        environment:
+            - DB_HOST=${GREEN_DB_HOST}
+            - DB_PORT=5432
+            - DB_NAME=${DB_NAME}
+            - DB_USER=${DB_USER}
+            - DB_PASS=${DB_PASS}
+            - NODE_ENV=${NODE_ENV}
+            - HASURA_GRAPHQL_ENDPOINT=${GREEN_HASURA_GRAPHQL_ENDPOINT}
+            - HASURA_GRAPHQL_ADMIN_SECRET=${HASURA_GRAPHQL_ADMIN_SECRET}
+        command: ["sh", "-c", "npx squid-typeorm-migration apply && npx squid-hasura-configuration apply"]
+        depends_on:
+            green-db:
+                condition: service_healthy
+            green-graphql:
+                condition: service_healthy
+        restart: "no"
+        networks:
+            - blue-green-network
+
+    green-graphql:
+        image: hasura/graphql-engine:v2.48.16
+        ports:
+            - "${GREEN_GQL_PORT}:8080"
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        depends_on:
+            green-db:
+                condition: service_healthy
+        environment:
+            HASURA_GRAPHQL_DATABASE_URL: "postgres://${DB_USER}:${DB_PASS}@${GREEN_DB_HOST}:5432/${DB_NAME}"
+            HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES: true
+            HASURA_GRAPHQL_ENABLE_SUBSCRIPTIONS: false
+            HASURA_GRAPHQL_ENABLE_CONSOLE: true
+            HASURA_GRAPHQL_DEV_MODE: false
+            HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup,http-log,webhook-log,websocket-log,query-log
+            HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
+            HASURA_GRAPHQL_UNAUTHORIZED_ROLE: ${HASURA_GRAPHQL_UNAUTHORIZED_ROLE}
+            HASURA_GRAPHQL_PG_CONNECTIONS: ${HASURA_PG_CONNECTIONS:-10}
+        restart: "unless-stopped"
+        networks:
+            - blue-green-network
+
+    green-processor:
+        image: ${IMAGE_NAME}:${GREEN_IMAGE_TAG}
+        environment:
+            - DB_HOST=${GREEN_DB_HOST}
+            - DB_PORT=5432
+            - START_BLOCK=${START_BLOCK}
+            # Per-color RPC endpoint. Defaults to the shared RPC_ENDPOINT (the
+            # canonical chain-node). During a boot-node deployment the script
+            # overrides GREEN_RPC_ENDPOINT so this env points at chain-node-next.
+            - RPC_ENDPOINT=${GREEN_RPC_ENDPOINT:-${RPC_ENDPOINT}}
+            - DB_NAME=${DB_NAME}
+            - GQL_PORT=${GQL_PORT}
+            - DB_USER=${DB_USER}
+            - DB_PASS=${DB_PASS}
+            - NODE_ENV=${NODE_ENV}
+            - DEPLOYMENT_COLOR=green
+            - PROMETHEUS_PORT=${PUBLIC_PORT_METRICS:-9090} 
+        ports:
+            - "${GREEN_METRICS_PORT}:3000"
+        command: ["node", "lib/main.js"]
+        depends_on:
+            green-db:
+                condition: service_healthy
+            green-migration:
+                condition: service_completed_successfully
+            chain-node:
+                condition: service_healthy
+        restart: "unless-stopped"
+        networks:
+            - blue-green-network
+
+    # Load Balancer/Reverse Proxy
+    nginx:
+        image: nginx:alpine
+        ports:
+            - "${PUBLIC_PORT_GRAPHQL:-4350}:4350"
+            - "${PUBLIC_PORT_METRICS:-9090}:9090"
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf:Z,ro
+            - ./nginx/current_env.conf:/etc/nginx/current_env.conf:Z,ro
+        restart: "unless-stopped"
+        networks:
+            - blue-green-network
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:4350/health || exit 1"]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+    
+    # Quantus Chain Node (canonical / always-on)
+    # Both blue and green processors point at this node by default.
+    chain-node:
+        image: ${CHAIN_NODE_IMAGE}
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9944/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        ports:
+            - "30333:30333"
+            - "9944:9944"
+            - "9616:9616"
+        volumes:
+            - ./chain-node-data:/data:Z
+        command:
+            - "--base-path=/data"
+            - "--chain=${CHAIN_SPEC:?CHAIN_SPEC must be set in .env.blue-green}"
+            - "--port=30333"
+            - "--prometheus-port=9616"
+            - "--rpc-external"   
+            - "--rpc-port=9944"
+            - "--rpc-cors=all"   
+            - "--name=SubsquidIndexer"
+            - "--enable-peer-sharing"
+        networks:
+            - blue-green-network
+
+    # Temporary "next" Quantus Chain Node, used only during a boot-node
+    # (breaking / new-genesis) deployment. It runs the NEW node image with its
+    # own data dir and host ports so it can fully sync the new chain WITHOUT
+    # disturbing the canonical chain-node that the live indexer keeps using.
+    #
+    # Guarded by the "bootnode" compose profile, so it is never started by
+    # normal `up`/`deploy` operations - only when the deploy script explicitly
+    # brings it up. On `promote-chain-node` its synced data is moved onto the
+    # canonical chain-node and this service is destroyed.
+    chain-node-next:
+        image: ${CHAIN_NODE_NEXT_IMAGE:-${CHAIN_NODE_IMAGE}}
+        profiles: ["bootnode"]
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9944/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        ports:
+            - "30334:30333"
+            - "9945:9944"
+            - "9617:9616"
+        volumes:
+            - ./chain-node-data-next:/data:Z
+        command:
+            - "--base-path=/data"
+            - "--chain=${CHAIN_NEXT_SPEC:?CHAIN_NEXT_SPEC must be set in .env.blue-green}"
+            - "--port=30333"
+            - "--prometheus-port=9616"
+            - "--rpc-external"
+            - "--rpc-port=9944"
+            - "--rpc-cors=all"
+            - "--name=SubsquidIndexerNext"
+            - "--enable-peer-sharing"
+        networks:
+            - blue-green-network
+
+networks:
+    blue-green-network:
+        driver: bridge

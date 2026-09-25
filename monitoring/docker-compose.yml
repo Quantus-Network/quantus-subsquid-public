@@ -1,0 +1,25 @@
+services:
+  explorer-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: explorer-monitor:latest
+    container_name: explorer-monitor
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  monitoring:
+    driver: bridge
+

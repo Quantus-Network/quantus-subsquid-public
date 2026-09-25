@@ -1,0 +1,11 @@
+# Build output
+/lib
+/node_modules
+
+# Generated files
+/src/generated_types
+/src/model/generated
+metadata.jsonl
+
+# Database
+/db 
