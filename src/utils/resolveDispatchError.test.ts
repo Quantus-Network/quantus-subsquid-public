@@ -1,12 +1,28 @@
 import { resetDecodeCallDataRegistry } from "./decodeCallData";
 import { resolveDispatchError } from "./resolveDispatchError";
 
-/** Latest spec of the v148 (mainnet) genesis. */
+/** Spec on the Planck chain. Module indices match mainnet. */
 const SPEC_V148 = 148;
+/** Genesis spec of the mainnet chain. */
+const SPEC_V152 = 152;
 
 describe("resolveDispatchError", () => {
     beforeEach(() => {
         resetDecodeCallDataRegistry();
+    });
+
+    it("resolves a mainnet genesis module error to pallet name, variant name, and docs", () => {
+        const resolved = resolveDispatchError(
+            { __kind: "Module", value: { index: 2, error: "0x02000000" } },
+            SPEC_V152,
+        );
+
+        expect(resolved).toEqual({
+            errorType: "Module",
+            errorModule: "Balances",
+            errorName: "InsufficientBalance",
+            errorDocs: "Balance too low to send value.",
+        });
     });
 
     it("resolves a module error to pallet name, variant name, and docs", () => {

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Augment metadata.jsonl from the SAME chain (runtime upgrades).
 # For a different genesis, use: RPC=<new-genesis-rpc> npm run meta:add
+# Mainnet genesis specs: npm run meta:add:mainnet
 # Usage: ./regenerate_metadata.sh
 
 set -e
