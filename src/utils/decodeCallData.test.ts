@@ -1,9 +1,11 @@
 import { decodeCallData, resetDecodeCallDataRegistry } from "./decodeCallData";
 
-/** Latest spec of the v148 (mainnet) genesis. */
+/** Spec on the Planck chain. Call indices match mainnet. */
 const SPEC_V148 = 148;
 /** Genesis spec of the v126 (Planck testnet) chain. */
 const SPEC_V126 = 126;
+/** Genesis spec of the mainnet chain. */
+const SPEC_V152 = 152;
 
 const GUARDIAN_ADDR = "qzjVsKygc34wWPcC5gaRArB5PZPV92h1BTzEaY8kQHuBs9Kjk";
 
@@ -51,6 +53,19 @@ describe("decodeCallData", () => {
         expect(decoded.delayKind).toEqual("Timestamp");
         expect(decoded.delayValue).toEqual(60_000n);
         expect(decoded.guardian).toEqual(GUARDIAN_ADDR);
+    });
+
+    it("decodes Balances.transfer_keep_alive with mainnet genesis spec 152", () => {
+        const account = Buffer.alloc(32, 1);
+        const callBytes = new Uint8Array([...Buffer.from([2, 3, 0]), ...account, 0xa1, 0x0f]);
+
+        const decoded = decodeCallData(callBytes, SPEC_V152);
+
+        expect(decoded.decodeError).toBeUndefined();
+        expect(decoded.pallet).toEqual("Balances");
+        expect(decoded.call).toEqual("transfer_keep_alive");
+        expect(decoded.transferTo).toEqual("qzjUYyuN4L3HKmBPMxHvK2n8HYnaLZcQvLSQTgdwB2nQ1g2mc");
+        expect(decoded.transferAmount).toEqual(1000n);
     });
 
     it("decodes with the metadata of the block's spec version (v126 names the guardian `interceptor`)", () => {

@@ -12,6 +12,7 @@
         "hasura:apply": "npx squid-hasura-configuration apply",
         "meta:update": "npx squid-substrate-metadata-explorer --rpc \"${RPC:?Set RPC env var}\" --out metadata.jsonl",
         "meta:add": "node scripts/add-genesis-metadata.js",
+        "meta:add:mainnet": "RPC=wss://rpc1-mainnet.quantus.com node scripts/add-genesis-metadata.js",
         "meta:delete": "rm -rf metadata.jsonl ./src/generated_types ./src/model",
         "gen:types": "npx squid-substrate-typegen ./typegen.json",
         "gen:model": "npx squid-typeorm-codegen",
