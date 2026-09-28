@@ -11,7 +11,7 @@ import {
     deserializeDeposits,
     serializeDeposits,
 } from "./utils/privacyScore";
-import { updateDailyChainStats } from "./utils/dailyChainStats";
+import { sumTransferredAmount, updateDailyChainStats } from "./utils/dailyChainStats";
 
 import { processor, RPC_SETTINGS, ProcessorContext, Event as ProcessorEvent } from "./processor";
 import {
@@ -345,6 +345,7 @@ if (process.env.NODE_ENV != "test") {
             unifiedTransactions,
             [...extrinsics.values()],
             transfers,
+            executedReversibles,
         );
 
         await ctx.store.upsert(depositPoolStats);
@@ -3545,6 +3546,7 @@ async function updateChainStats(
             totalMiners: 0,
             totalTechReferenda: 0,
             totalRuntimeUpgrades: 0,
+            totalTransferredAmount: 0n,
         });
     } else {
         // Subsequent batches: O(1) delta updates — no DB scan needed
@@ -3566,6 +3568,7 @@ async function updateChainStats(
 
     // Exclude hashless transfers (miner/treasury rewards and reversible settlements)
     chainStats.totalImmediateTransfers += transfers.reduce((n, t) => n + (t.extrinsic != null ? 1 : 0), 0);
+    chainStats.totalTransferredAmount += sumTransferredAmount(transfers, executedReversibles);
     chainStats.totalScheduledTransfers += scheduledReversibles.length;
     chainStats.totalExecutedTransfers += executedReversibles.length;
     chainStats.totalCancelledTransfers += cancelledReversibles.length;

@@ -575,6 +575,8 @@ type ChainStats @entity {
     totalSupply: BigInt!
     "Total supply minus still-locked vesting at blockHeight, as a raw token amount. Unlocked token counts whether or not it has been claimed."
     circulatingSupply: BigInt!
+    "All-time sum of signed transfer amounts plus executed reversible amounts, as a raw token amount. Fees are excluded."
+    totalTransferredAmount: BigInt!
 }
 
 "UTC calendar-day rollup for explorer home chart (id = YYYY-MM-DD)"
@@ -588,6 +590,8 @@ type DailyChainStats @entity {
     txCount: Int!
     "Distinct accounts that signed at least one extrinsic on this UTC day"
     activeAccounts: Int!
+    "Signed transfer amounts plus executed reversible amounts on this UTC day, as a raw token amount. Fees are excluded."
+    transferredAmount: BigInt!
 }
 
 "Per-UTC-day account activity (id = YYYY-MM-DD:{address}). Backs DailyChainStats.activeAccounts and the explorer's 7-day active / deposit account counts."
