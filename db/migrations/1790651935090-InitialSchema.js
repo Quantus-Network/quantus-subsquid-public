@@ -1,5 +1,5 @@
-module.exports = class InitialSchema1790649858719 {
-    name = 'InitialSchema1790649858719'
+module.exports = class InitialSchema1790651935090 {
+    name = 'InitialSchema1790651935090'
 
     async up(db) {
         await db.query(`CREATE TABLE "extrinsic" ("id" character varying NOT NULL, "index_in_block" integer NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "pallet" text NOT NULL, "call" text NOT NULL, "args" text NOT NULL, "success" boolean NOT NULL, "fee" numeric NOT NULL, "block_id" character varying, "signer_id" character varying, CONSTRAINT "PK_80d7db0e4b1e83e30336bc76755" PRIMARY KEY ("id"))`)
@@ -18,7 +18,7 @@ module.exports = class InitialSchema1790649858719 {
         await db.query(`CREATE INDEX "IDX_7de85b41d5d0f20c13aa77808d" ON "scheduled_reversible_transfer" ("to_id") `)
         await db.query(`CREATE INDEX "IDX_4183a9a388904332135f6a3b31" ON "scheduled_reversible_transfer" ("tx_id") `)
         await db.query(`CREATE INDEX "IDX_c256019135e5463142148dcf4e" ON "scheduled_reversible_transfer" ("scheduled_at") `)
-        await db.query(`CREATE TABLE "executed_reversible_transfer" ("id" character varying NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "tx_id" text NOT NULL, "block_id" character varying, "scheduled_transfer_id" character varying, "executed_transfer_id" character varying, CONSTRAINT "REL_fbd3a7c4898404dd613b8aea3e" UNIQUE ("executed_transfer_id"), CONSTRAINT "PK_a6fa1bccbaaa699937068f421fb" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "executed_reversible_transfer" ("id" character varying NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "tx_id" text NOT NULL, "result" text NOT NULL, "block_id" character varying, "scheduled_transfer_id" character varying, "executed_transfer_id" character varying, CONSTRAINT "REL_fbd3a7c4898404dd613b8aea3e" UNIQUE ("executed_transfer_id"), CONSTRAINT "PK_a6fa1bccbaaa699937068f421fb" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_e398d942c1ccf3ebe846283ec4" ON "executed_reversible_transfer" ("block_id") `)
         await db.query(`CREATE INDEX "IDX_7cfa4fb33d115ad75d6f05ce19" ON "executed_reversible_transfer" ("timestamp") `)
         await db.query(`CREATE INDEX "IDX_2497fcceeb38d72a3af9a78c6b" ON "executed_reversible_transfer" ("tx_id") `)
