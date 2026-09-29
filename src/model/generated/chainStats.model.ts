@@ -97,7 +97,7 @@ export class ChainStats {
     circulatingSupply!: bigint
 
     /**
-     * All-time sum of signed transfer amounts plus executed reversible amounts, as a raw token amount. Fees are excluded.
+     * All-time sum of signed transfer amounts plus successful executed reversible amounts, including a transfer to the same account, as a raw token amount. Fees are excluded.
      */
     @BigIntColumn_({nullable: false})
     totalTransferredAmount!: bigint

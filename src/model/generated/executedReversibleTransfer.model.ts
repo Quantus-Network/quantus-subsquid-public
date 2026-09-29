@@ -25,6 +25,12 @@ export class ExecutedReversibleTransfer {
     @StringColumn_({nullable: false})
     txId!: string
 
+    /**
+     * TransactionExecuted dispatch result: Ok, or Err when the inner transfer failed
+     */
+    @StringColumn_({nullable: false})
+    result!: string
+
     @Index_()
     @ManyToOne_(() => ScheduledReversibleTransfer, {nullable: true})
     scheduledTransfer!: ScheduledReversibleTransfer

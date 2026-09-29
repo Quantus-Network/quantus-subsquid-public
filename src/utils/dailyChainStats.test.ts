@@ -88,6 +88,7 @@ function makeExecuted(
     id: string,
     timestamp: Date,
     scheduledTransfer: ScheduledReversibleTransfer,
+    result: string,
     executedTransfer?: Transfer | null,
 ): ExecutedReversibleTransfer {
     return new ExecutedReversibleTransfer({
@@ -96,6 +97,7 @@ function makeExecuted(
         txId: scheduledTransfer.txId,
         scheduledTransfer,
         executedTransfer,
+        result,
     });
 }
 
@@ -221,7 +223,7 @@ describe("dailyChainStats helpers", () => {
         const mint = makeTransfer("mint", scheduleDay, blockA, alice, bob, 50n);
         const scheduled = makeScheduled("sched", scheduleDay, 70n);
         const settlement = makeTransfer("settlement", executeDay, blockB, alice, bob, 70n);
-        const executed = makeExecuted("exec", executeDay, scheduled, settlement);
+        const executed = makeExecuted("exec", executeDay, scheduled, "Ok", settlement);
 
         const deltas = accumulateDailyRollupDeltas([], [], [], [signed, mint, settlement], [executed]);
         expect(deltas.get("2024-05-01")?.transferredAmount).toEqual(100n);
@@ -232,14 +234,48 @@ describe("dailyChainStats helpers", () => {
         expect(dayTotals).toEqual(sumTransferredAmount([signed, mint, settlement], [executed]));
     });
 
+    it("a failed execution with no settlement transfer contributes 0", () => {
+        const executeDay = new Date("2024-05-02T09:00:00.000Z");
+        const scheduled = makeScheduled("sched-failed", executeDay, 70n);
+        const executed = makeExecuted("exec-failed", executeDay, scheduled, "Err");
+
+        const deltas = accumulateDailyRollupDeltas([], [], [], [], [executed]);
+        expect(deltas.get("2024-05-02")?.transferredAmount).toEqual(0n);
+        expect(sumTransferredAmount([], [executed])).toEqual(0n);
+    });
+
+    it("a successful self-transfer contributes the scheduled amount", () => {
+        const executeDay = new Date("2024-05-02T09:00:00.000Z");
+        const alice = makeAccount("alice");
+        const scheduled = makeScheduled("sched-self", executeDay, 70n);
+        scheduled.from = alice;
+        scheduled.to = alice;
+        const executed = makeExecuted("exec-self", executeDay, scheduled, "Ok");
+
+        const deltas = accumulateDailyRollupDeltas([], [], [], [], [executed]);
+        expect(deltas.get("2024-05-02")?.transferredAmount).toEqual(70n);
+        expect(sumTransferredAmount([], [executed])).toEqual(70n);
+    });
+
     it("throws when an executed reversible has no scheduled transfer", () => {
         const executed = new ExecutedReversibleTransfer({
             id: "exec-missing",
             timestamp: new Date("2024-05-02T09:00:00.000Z"),
             txId: "tx:missing",
+            result: "Ok",
             scheduledTransfer: undefined,
         });
         expect(() => sumTransferredAmount([], [executed])).toThrow(/exec-missing/);
+    });
+
+    it("throws when an executed reversible has no Ok or Err result", () => {
+        const executed = makeExecuted(
+            "exec-no-result",
+            new Date("2024-05-02T09:00:00.000Z"),
+            makeScheduled("sched-no-result", new Date("2024-05-02T09:00:00.000Z"), 70n),
+            "",
+        );
+        expect(() => sumTransferredAmount([], [executed])).toThrow(/exec-no-result/);
     });
 
     describe("updateDailyChainStats", () => {

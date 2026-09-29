@@ -38,7 +38,7 @@ export class DailyChainStats {
     activeAccounts!: number
 
     /**
-     * Signed transfer amounts plus executed reversible amounts on this UTC day, as a raw token amount. Fees are excluded.
+     * Signed transfer amounts plus successful executed reversible amounts on this UTC day, including a transfer to the same account, as a raw token amount. Fees are excluded.
      */
     @BigIntColumn_({nullable: false})
     transferredAmount!: bigint

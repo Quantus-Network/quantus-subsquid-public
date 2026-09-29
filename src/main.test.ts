@@ -185,6 +185,7 @@ describe("createReversibleTransfers", () => {
         expect(result.scheduledReversibles).toHaveLength(1);
         expect(result.executedReversibles).toHaveLength(1);
         expect(result.executedReversibles[0].txId).toEqual("tx-1");
+        expect(result.executedReversibles[0].result).toEqual("Ok");
         expect(result.executedReversibles[0].scheduledTransfer).toBe(result.scheduledReversibles[0]);
         expect(result.executedReversibles[0].timestamp).toEqual(execTimestamp);
         expect(result.cancelledReversibles).toHaveLength(0);
@@ -266,8 +267,62 @@ describe("createReversibleTransfers", () => {
         expect(result.scheduledReversibles).toHaveLength(0);
         expect(result.executedReversibles).toHaveLength(1);
         expect(result.executedReversibles[0].txId).toEqual("tx-3");
+        expect(result.executedReversibles[0].result).toEqual("Ok");
         expect(result.executedReversibles[0].scheduledTransfer).toBe(existingScheduled);
         expect(result.cancelledReversibles).toHaveLength(0);
+    });
+
+    it("stores Err when the inner transfer failed", async () => {
+        const existingScheduled = {
+            id: "existing-err",
+            txId: "tx-err",
+            from: mockAccounts.get("from-address"),
+            to: mockAccounts.get("to-address"),
+            amount: 70n,
+            block: mockBlocks.get("block-1"),
+            timestamp: new Date(),
+            scheduledAt: new Date(),
+        };
+        (mockStore as any).find = async () => [existingScheduled];
+
+        const result = await createReversibleTransfers(
+            mockCtx,
+            [],
+            [],
+            [{ id: "evt-err", txId: "tx-err", result: "Err", block: "block-1", timestamp: new Date() }],
+            mockAccounts,
+            mockBlocks,
+            mockExtrinsics,
+        );
+
+        expect(result.executedReversibles).toHaveLength(1);
+        expect(result.executedReversibles[0].result).toEqual("Err");
+    });
+
+    it("throws when TransactionExecuted result is neither Ok nor Err", async () => {
+        const existingScheduled = {
+            id: "existing-bad",
+            txId: "tx-bad",
+            from: mockAccounts.get("from-address"),
+            to: mockAccounts.get("to-address"),
+            amount: 70n,
+            block: mockBlocks.get("block-1"),
+            timestamp: new Date(),
+            scheduledAt: new Date(),
+        };
+        (mockStore as any).find = async () => [existingScheduled];
+
+        await expect(
+            createReversibleTransfers(
+                mockCtx,
+                [],
+                [],
+                [{ id: "evt-bad", txId: "tx-bad", result: "Maybe", block: "block-1", timestamp: new Date() }],
+                mockAccounts,
+                mockBlocks,
+                mockExtrinsics,
+            ),
+        ).rejects.toThrow(/evt-bad/);
     });
 });
 
@@ -1057,6 +1112,7 @@ describe("buildUnifiedTransactions", () => {
             block,
             timestamp: block.timestamp,
             txId: "tx-1",
+            result: "Ok",
             scheduledTransfer: scheduled,
             executedTransfer: settlement,
         });
@@ -1092,6 +1148,91 @@ describe("buildUnifiedTransactions", () => {
         expect(canc.status).toEqual(UnifiedTransactionStatus.CANCELLED);
         expect(canc.from?.id).toEqual("from");
         expect(canc.to?.id).toEqual("to");
+    });
+
+    it("marks a failed reversible execution as ERROR and a self-transfer as EXECUTED", () => {
+        const scheduledFailed = new ScheduledReversibleTransfer({
+            id: "s-fail",
+            block,
+            timestamp: block.timestamp,
+            from,
+            to,
+            amount: 70n,
+            fee: 1n,
+            txId: "tx-fail",
+            scheduledAt: block.timestamp,
+        });
+        const failed = new ExecutedReversibleTransfer({
+            id: "e-fail",
+            block,
+            timestamp: block.timestamp,
+            txId: "tx-fail",
+            result: "Err",
+            scheduledTransfer: scheduledFailed,
+        });
+        const scheduledSelf = new ScheduledReversibleTransfer({
+            id: "s-self",
+            block,
+            timestamp: block.timestamp,
+            from,
+            to: from,
+            amount: 70n,
+            fee: 1n,
+            txId: "tx-self",
+            scheduledAt: block.timestamp,
+        });
+        const selfTransfer = new ExecutedReversibleTransfer({
+            id: "e-self",
+            block,
+            timestamp: block.timestamp,
+            txId: "tx-self",
+            result: "Ok",
+            scheduledTransfer: scheduledSelf,
+        });
+
+        const rows = buildUnifiedTransactions([], [], [failed, selfTransfer], [], []);
+        const byId = new Map(rows.map((row) => [row.id, row]));
+
+        expect(byId.get("executed-reversible:e-fail")).toEqual(
+            expect.objectContaining({
+                type: UnifiedTransactionType.EXECUTED_REVERSIBLE,
+                status: UnifiedTransactionStatus.ERROR,
+                amount: 70n,
+            }),
+        );
+        expect(byId.get("executed-reversible:e-self")).toEqual(
+            expect.objectContaining({
+                type: UnifiedTransactionType.EXECUTED_REVERSIBLE,
+                status: UnifiedTransactionStatus.EXECUTED,
+                amount: 70n,
+                from: from,
+                to: from,
+            }),
+        );
+    });
+
+    it("throws when an executed reversible has no Ok or Err result", () => {
+        const scheduled = new ScheduledReversibleTransfer({
+            id: "s-bad",
+            block,
+            timestamp: block.timestamp,
+            from,
+            to,
+            amount: 70n,
+            fee: 1n,
+            txId: "tx-bad",
+            scheduledAt: block.timestamp,
+        });
+        const executed = new ExecutedReversibleTransfer({
+            id: "e-bad",
+            block,
+            timestamp: block.timestamp,
+            txId: "tx-bad",
+            result: "",
+            scheduledTransfer: scheduled,
+        });
+
+        expect(() => buildUnifiedTransactions([], [], [executed], [], [])).toThrow(/e-bad/);
     });
 
     it("types wormhole-exit transfers as WORMHOLE with from/to and skips aggregate duplicate", () => {

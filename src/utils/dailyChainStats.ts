@@ -24,16 +24,25 @@ export function signedTransferAmount(transfer: Transfer): bigint {
     return transfer.extrinsic != null ? transfer.amount : 0n;
 }
 
-/** Scheduled amount, counted once the reversible transfer has executed. Fees are excluded. */
+/**
+ * Scheduled amount when TransactionExecuted succeeded, including a transfer to the same account.
+ * A failed inner transfer contributes nothing. Fees are excluded.
+ */
 export function executedReversibleTransferAmount(executed: ExecutedReversibleTransfer): bigint {
     if (executed.scheduledTransfer == null) {
         throw new Error(`ExecutedReversibleTransfer ${executed.id} has no scheduledTransfer`);
+    }
+    if (executed.result !== "Ok" && executed.result !== "Err") {
+        throw new Error(`ExecutedReversibleTransfer ${executed.id} has result ${String(executed.result)}`);
+    }
+    if (executed.result === "Err") {
+        return 0n;
     }
     return executed.scheduledTransfer.amount;
 }
 
 /**
- * Batch total of signed transfer amounts plus executed reversible amounts.
+ * Batch total of signed transfer amounts plus successful executed reversible amounts.
  * Daily rollup uses the same two helpers, so the all-time sum matches the sum of daily buckets.
  */
 export function sumTransferredAmount(transfers: Transfer[], executedReversibles: ExecutedReversibleTransfer[]): bigint {
@@ -65,7 +74,7 @@ export interface DailyRollupDelta {
     senderIds: Set<string>;
     /** Distinct Transfer.to ids (every transfer row, including hashless ones). */
     receiverIds: Set<string>;
-    /** Signed Transfer.amount plus executed reversible amount, raw token units. Fees excluded. */
+    /** Signed Transfer.amount plus successful executed reversible amount, raw token units. Fees excluded. */
     transferredAmount: bigint;
 }
 
@@ -74,7 +83,7 @@ export interface DailyRollupDelta {
  * txCount excludes hashless IMMEDIATE rewards; activeAccounts uses Extrinsic.signer.
  * senderIds / receiverIds mirror Account.transfersFrom / transfersTo so the explorer
  * can count "sent in window" / "received in window" accounts without scanning transfers.
- * transferredAmount is signed Transfer.amount plus executed reversible amount (fees excluded).
+ * transferredAmount is signed Transfer.amount plus successful executed reversible amount (fees excluded).
  */
 export function accumulateDailyRollupDeltas(
     blocks: Block[],
