@@ -1,7 +1,10 @@
+const { assertCleanReindex } = require("../../scripts/require-clean-reindex")
+
 module.exports = class InitialSchema1790651935090 {
     name = 'InitialSchema1790651935090'
 
     async up(db) {
+        await assertCleanReindex(db)
         await db.query(`CREATE TABLE "extrinsic" ("id" character varying NOT NULL, "index_in_block" integer NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "pallet" text NOT NULL, "call" text NOT NULL, "args" text NOT NULL, "success" boolean NOT NULL, "fee" numeric NOT NULL, "block_id" character varying, "signer_id" character varying, CONSTRAINT "PK_80d7db0e4b1e83e30336bc76755" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_a3b99daba1259dab0dd040d4f7" ON "extrinsic" ("block_id") `)
         await db.query(`CREATE INDEX "IDX_e73266d043b897ec3ff58d5fb5" ON "extrinsic" ("index_in_block") `)

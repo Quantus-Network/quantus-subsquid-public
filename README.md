@@ -36,25 +36,25 @@ sqd build
 
 ## Running the Indexer
 
-1. Start the database:
+`InitialSchema1790651935090` replaces `InitialSchema1790152249086`. TypeORM records applied migrations by name, so a database from the previous migration still looks pending. `sqd migration:apply` and `sqd run` refuse to continue while indexer tables are already present. Drop that database and reindex. The processor rebuilds chain totals from chain history.
 
-**Start retaining existing data**
-```bash
-sqd up
-```
-
-**Start clean (delete existing database):**
+**Clean reindex (required for a database created by an earlier migration):**
 ```bash
 sqd down
 sqd up
-npx squid-typeorm-migration generate
-sqd migration:clean
 sqd migration:apply
+sqd run
 ```
 
-2. Start the indexer
+`sqd down` removes the local Postgres container. `docker-compose-dev.yml` does not mount a data volume, so the next `sqd up` is an empty database.
 
-This will run the processor and serve GraphQL
+**Resume when `InitialSchema1790651935090` is already applied:**
+```bash
+sqd up
+sqd run
+```
+
+Start the processor and GraphQL API:
 
 ```bash
 sqd run
@@ -107,15 +107,12 @@ If you encounter issues:
 
 1. Make sure Docker is running
 2. Check that your RPC endpoint is correct in `.env`
-3. Try cleaning the database and starting fresh:
+3. Drop the database and reindex:
 ```bash
 sqd down
 sqd up
-sqd migration:clean
 sqd migration:apply
-
-or 
-sqd down && sqd up && sqd migration:clean && sqd migration:apply
+sqd run
 ```
 
 ## In case we need to redo this - how to create a new subsquid project

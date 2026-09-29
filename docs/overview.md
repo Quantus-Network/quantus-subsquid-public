@@ -20,16 +20,12 @@ If you've changed `schema.graphql` or `typegen.json`, you'll likely need to rege
 
 1.  **Stop any running squid processes** (e.g., `sqd process`, `sqd run`).
 
-2.  **(Optional) Reset your database to clear old data:**
-    *   To completely remove old data and start fresh with new containers:
-        ```bash
-        sqd down
-        sqd up
-        ```
-    *   Alternatively, if your database container is running and you only want to clear the tables managed by the squid:
-        ```bash
-        sqd migration:clean
-        ```
+2.  **Drop the database before applying a replaced initial migration.**
+    This project ships one initial migration. `sqd migration:apply` refuses to run while indexer tables already exist, and the processor rebuilds chain totals from chain history on the empty database.
+    ```bash
+    sqd down
+    sqd up
+    ```
 
 3.  **Generate TypeORM entity classes** (from `schema.graphql`):
     ```bash
