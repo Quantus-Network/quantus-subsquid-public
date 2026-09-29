@@ -11,7 +11,7 @@ import {
     deserializeDeposits,
     serializeDeposits,
 } from "./utils/privacyScore";
-import { updateDailyChainStats } from "./utils/dailyChainStats";
+import { sumTransferredAmount, updateDailyChainStats } from "./utils/dailyChainStats";
 
 import { processor, RPC_SETTINGS, ProcessorContext, Event as ProcessorEvent } from "./processor";
 import {
@@ -345,6 +345,7 @@ if (process.env.NODE_ENV != "test") {
             unifiedTransactions,
             [...extrinsics.values()],
             transfers,
+            executedReversibles,
         );
 
         await ctx.store.upsert(depositPoolStats);
@@ -1861,12 +1862,17 @@ export async function createReversibleTransfers(
         const scheduledTransfer = findScheduled(e.txId);
         assert(scheduledTransfer, `ScheduledReversibleTransfer for txId ${e.txId} not found`);
 
+        if (e.result !== "Ok" && e.result !== "Err") {
+            throw new Error(`TransactionExecuted ${e.id} has result ${e.result}`);
+        }
+
         executedReversibles.push(
             new ExecutedReversibleTransfer({
                 id: e.id,
                 block,
                 timestamp: e.timestamp,
                 txId: e.txId,
+                result: e.result,
                 scheduledTransfer,
             }),
         );
@@ -3545,6 +3551,7 @@ async function updateChainStats(
             totalMiners: 0,
             totalTechReferenda: 0,
             totalRuntimeUpgrades: 0,
+            totalTransferredAmount: 0n,
         });
     } else {
         // Subsequent batches: O(1) delta updates — no DB scan needed
@@ -3564,8 +3571,11 @@ async function updateChainStats(
     chainStats.blockHeight = Math.max(chainStats.blockHeight, maxBlockHeight);
     chainStats.finalizedBlockHeight = await getFinalizedBlockHeight(ctx);
 
-    // Exclude hashless transfers (miner/treasury rewards and reversible settlements)
+    // Exclude hashless transfers (miner/treasury rewards and reversible settlements).
+    // Successful reversible executions, including a transfer to the same account, are added
+    // from ExecutedReversibleTransfer. A failed execution adds nothing.
     chainStats.totalImmediateTransfers += transfers.reduce((n, t) => n + (t.extrinsic != null ? 1 : 0), 0);
+    chainStats.totalTransferredAmount += sumTransferredAmount(transfers, executedReversibles);
     chainStats.totalScheduledTransfers += scheduledReversibles.length;
     chainStats.totalExecutedTransfers += executedReversibles.length;
     chainStats.totalCancelledTransfers += cancelledReversibles.length;
@@ -3690,6 +3700,12 @@ function statusFromExtrinsic(extrinsic: Extrinsic | undefined | null): UnifiedTr
     return extrinsic.success ? UnifiedTransactionStatus.SUCCESS : UnifiedTransactionStatus.ERROR;
 }
 
+function statusFromExecutedReversible(executed: ExecutedReversibleTransfer): UnifiedTransactionStatus {
+    if (executed.result === "Ok") return UnifiedTransactionStatus.EXECUTED;
+    if (executed.result === "Err") return UnifiedTransactionStatus.ERROR;
+    throw new Error(`ExecutedReversibleTransfer ${executed.id} has result ${String(executed.result)}`);
+}
+
 /**
  * Fee for a Transfer-backed WORMHOLE row.
  * Transfer.fee comes only from matching Balances.Transfer events; wormhole exits are
@@ -3720,6 +3736,9 @@ function wormholeUnifiedFee(t: Transfer, isExtrinsicFeeCarrier: boolean, wormhol
  * that exit (defensive; not for Extrinsic-linkage gaps).
  * Wormhole exit fee: keep Transfer.fee when non-zero; otherwise extrinsic fee on the
  * first output (by leafIndex, then id) of each exit, 0n on the rest.
+ *
+ * An executed reversible is EXECUTED when TransactionExecuted is Ok, including a transfer
+ * to the same account, and ERROR when it is Err.
  */
 export function buildUnifiedTransactions(
     transfers: Transfer[],
@@ -3856,7 +3875,7 @@ export function buildUnifiedTransactions(
                 to: scheduled.to,
                 amount: scheduled.amount,
                 fee: undefined,
-                status: UnifiedTransactionStatus.EXECUTED,
+                status: statusFromExecutedReversible(e),
                 detailId: e.txId,
             }),
         );

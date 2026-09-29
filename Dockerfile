@@ -33,6 +33,7 @@ COPY --from=builder /app/schema.graphql ./schema.graphql
 COPY --from=builder /app/metadata.jsonl ./metadata.jsonl
 COPY --from=builder /app/hasura_metadata.json ./hasura_metadata.json
 COPY --from=builder /app/db ./db
+COPY --from=builder /app/scripts/require-clean-reindex.js ./scripts/require-clean-reindex.js
 
 # Install only production dependencies
 RUN npm ci --production --ignore-scripts

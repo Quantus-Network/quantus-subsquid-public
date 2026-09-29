@@ -15,7 +15,7 @@ Denormalized explorer list entity for fast global and account offset pagination.
 | `timestamp` | Event timestamp |
 | `from` / `to` | Parties. Set for Transfer-backed rows including wormhole exits. Null only for aggregate wormhole fallback. For executed/cancelled, taken from the linked scheduled transfer |
 | `amount` / `fee` | Amount and fee; fee null for executed-reversible. Wormhole exits: prefer `Transfer.fee` when non-zero, else extrinsic fee once on the first output (by `leafIndex`), `0` on the rest (exits are mint paths so `Transfer.fee` is usually `0`) |
-| `status` | `SUCCESS` / `ERROR` / `SCHEDULED` / `EXECUTED` / `CANCELLED` |
+| `status` | `SUCCESS` / `ERROR` / `SCHEDULED` / `EXECUTED` / `CANCELLED`. An executed reversible is `EXECUTED` when `TransactionExecuted` is `Ok` (including a transfer to the same account) and `ERROR` when it is `Err`. |
 | `detailId` | Detail routing: transfer id, reversible `txId`, or wormhole extrinsic id |
 
 ## Classification (one row per movement)

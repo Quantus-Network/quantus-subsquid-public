@@ -2,6 +2,7 @@ import {
     accumulateDailyRollupDeltas,
     countNonRewardUnifiedTransactions,
     isRewardUnifiedTransaction,
+    sumTransferredAmount,
     updateDailyChainStats,
     utcDayId,
     utcDayStart,
@@ -12,7 +13,9 @@ import {
     Block,
     DailyActiveAccount,
     DailyChainStats,
+    ExecutedReversibleTransfer,
     Extrinsic,
+    ScheduledReversibleTransfer,
     Transfer,
     UnifiedTransaction,
     UnifiedTransactionStatus,
@@ -44,7 +47,15 @@ function makeAccount(id: string): Account {
     });
 }
 
-function makeTransfer(id: string, timestamp: Date, block: Block, from: Account, to: Account): Transfer {
+function makeTransfer(
+    id: string,
+    timestamp: Date,
+    block: Block,
+    from: Account,
+    to: Account,
+    amount: bigint = 1n,
+    extrinsic?: Extrinsic | null,
+): Transfer {
     return new Transfer({
         id,
         block,
@@ -52,12 +63,41 @@ function makeTransfer(id: string, timestamp: Date, block: Block, from: Account, 
         timestamp,
         from,
         to,
-        amount: 1n,
-        fee: 0n,
+        amount,
+        fee: 9n,
         fromHash: `h:${from.id}`,
         toHash: `h:${to.id}`,
         transferCount: 0n,
         leafIndex: 0n,
+        extrinsic,
+    });
+}
+
+function makeScheduled(id: string, timestamp: Date, amount: bigint): ScheduledReversibleTransfer {
+    return new ScheduledReversibleTransfer({
+        id,
+        timestamp,
+        amount,
+        fee: 3n,
+        txId: `tx:${id}`,
+        scheduledAt: timestamp,
+    });
+}
+
+function makeExecuted(
+    id: string,
+    timestamp: Date,
+    scheduledTransfer: ScheduledReversibleTransfer,
+    result: string,
+    executedTransfer?: Transfer | null,
+): ExecutedReversibleTransfer {
+    return new ExecutedReversibleTransfer({
+        id,
+        timestamp,
+        txId: scheduledTransfer.txId,
+        scheduledTransfer,
+        executedTransfer,
+        result,
     });
 }
 
@@ -160,7 +200,7 @@ describe("dailyChainStats helpers", () => {
             makeTransfer("t3", dayB, blocks[2], carol, alice),
         ];
 
-        const deltas = accumulateDailyRollupDeltas(blocks, txs, extrinsics, transfers);
+        const deltas = accumulateDailyRollupDeltas(blocks, txs, extrinsics, transfers, []);
         expect(deltas.get("2024-03-10")).toEqual(expect.objectContaining({ blocks: 2, txs: 1 }));
         expect([...deltas.get("2024-03-10")!.signerIds].sort()).toEqual(["alice"]);
         expect([...deltas.get("2024-03-10")!.senderIds].sort()).toEqual(["alice"]);
@@ -169,6 +209,73 @@ describe("dailyChainStats helpers", () => {
         expect([...deltas.get("2024-03-11")!.signerIds]).toEqual(["bob"]);
         expect([...deltas.get("2024-03-11")!.senderIds]).toEqual(["carol"]);
         expect([...deltas.get("2024-03-11")!.receiverIds]).toEqual(["alice"]);
+    });
+
+    it("sums signed transfer amounts and executed reversible amounts, excluding fees and hashless mints", () => {
+        const scheduleDay = new Date("2024-05-01T08:00:00.000Z");
+        const executeDay = new Date("2024-05-02T09:00:00.000Z");
+        const alice = makeAccount("alice");
+        const bob = makeAccount("bob");
+        const blockA = makeBlock(10, scheduleDay);
+        const blockB = makeBlock(20, executeDay);
+        const signedExtrinsic = makeExtrinsic({ id: "0xsigned", timestamp: scheduleDay, block: blockA, signer: alice });
+        const signed = makeTransfer("signed", scheduleDay, blockA, alice, bob, 100n, signedExtrinsic);
+        const mint = makeTransfer("mint", scheduleDay, blockA, alice, bob, 50n);
+        const scheduled = makeScheduled("sched", scheduleDay, 70n);
+        const settlement = makeTransfer("settlement", executeDay, blockB, alice, bob, 70n);
+        const executed = makeExecuted("exec", executeDay, scheduled, "Ok", settlement);
+
+        const deltas = accumulateDailyRollupDeltas([], [], [], [signed, mint, settlement], [executed]);
+        expect(deltas.get("2024-05-01")?.transferredAmount).toEqual(100n);
+        expect(deltas.get("2024-05-02")?.transferredAmount).toEqual(70n);
+        expect(sumTransferredAmount([signed, mint, settlement], [executed])).toEqual(170n);
+
+        const dayTotals = [...deltas.values()].reduce((sum, delta) => sum + delta.transferredAmount, 0n);
+        expect(dayTotals).toEqual(sumTransferredAmount([signed, mint, settlement], [executed]));
+    });
+
+    it("a failed execution with no settlement transfer contributes 0", () => {
+        const executeDay = new Date("2024-05-02T09:00:00.000Z");
+        const scheduled = makeScheduled("sched-failed", executeDay, 70n);
+        const executed = makeExecuted("exec-failed", executeDay, scheduled, "Err");
+
+        const deltas = accumulateDailyRollupDeltas([], [], [], [], [executed]);
+        expect(deltas.get("2024-05-02")?.transferredAmount).toEqual(0n);
+        expect(sumTransferredAmount([], [executed])).toEqual(0n);
+    });
+
+    it("a successful self-transfer contributes the scheduled amount", () => {
+        const executeDay = new Date("2024-05-02T09:00:00.000Z");
+        const alice = makeAccount("alice");
+        const scheduled = makeScheduled("sched-self", executeDay, 70n);
+        scheduled.from = alice;
+        scheduled.to = alice;
+        const executed = makeExecuted("exec-self", executeDay, scheduled, "Ok");
+
+        const deltas = accumulateDailyRollupDeltas([], [], [], [], [executed]);
+        expect(deltas.get("2024-05-02")?.transferredAmount).toEqual(70n);
+        expect(sumTransferredAmount([], [executed])).toEqual(70n);
+    });
+
+    it("throws when an executed reversible has no scheduled transfer", () => {
+        const executed = new ExecutedReversibleTransfer({
+            id: "exec-missing",
+            timestamp: new Date("2024-05-02T09:00:00.000Z"),
+            txId: "tx:missing",
+            result: "Ok",
+            scheduledTransfer: undefined,
+        });
+        expect(() => sumTransferredAmount([], [executed])).toThrow(/exec-missing/);
+    });
+
+    it("throws when an executed reversible has no Ok or Err result", () => {
+        const executed = makeExecuted(
+            "exec-no-result",
+            new Date("2024-05-02T09:00:00.000Z"),
+            makeScheduled("sched-no-result", new Date("2024-05-02T09:00:00.000Z"), 70n),
+            "",
+        );
+        expect(() => sumTransferredAmount([], [executed])).toThrow(/exec-no-result/);
     });
 
     describe("updateDailyChainStats", () => {
@@ -201,6 +308,7 @@ describe("dailyChainStats helpers", () => {
                 blocksCount: 5,
                 txCount: 10,
                 activeAccounts: 1,
+                transferredAmount: 0n,
             });
             const aliceRow = makeActive("alice", { signed: true, sent: false, received: false });
             const store = makeStore([existing], [aliceRow]);
@@ -227,6 +335,7 @@ describe("dailyChainStats helpers", () => {
                     makeExtrinsic({ id: "0xcarol", timestamp: day, block, signer: carol }),
                 ],
                 [makeTransfer("t1", day, block, alice, dave)],
+                [],
             );
 
             expect(dailyStats).toHaveLength(1);
@@ -263,6 +372,7 @@ describe("dailyChainStats helpers", () => {
                 blocksCount: 0,
                 txCount: 0,
                 activeAccounts: 0,
+                transferredAmount: 0n,
             });
             const daveRow = makeActive("dave", { signed: false, sent: false, received: true });
             const store = makeStore([existing], [daveRow]);
@@ -275,6 +385,7 @@ describe("dailyChainStats helpers", () => {
                 [block],
                 [],
                 [makeExtrinsic({ id: "0xdave", timestamp: day, block, signer: dave })],
+                [],
                 [],
             );
 
@@ -291,6 +402,7 @@ describe("dailyChainStats helpers", () => {
                 blocksCount: 0,
                 txCount: 0,
                 activeAccounts: 1,
+                transferredAmount: 0n,
             });
             const aliceRow = makeActive("alice", { signed: true, sent: true, received: false });
             const store = makeStore([existing], [aliceRow]);
@@ -305,6 +417,7 @@ describe("dailyChainStats helpers", () => {
                 [],
                 [makeExtrinsic({ id: "0xalice2", timestamp: day, block, signer: alice })],
                 [makeTransfer("t2", day, block, alice, bob)],
+                [],
             );
 
             expect(dailyStats[0].activeAccounts).toEqual(1);
@@ -313,8 +426,35 @@ describe("dailyChainStats helpers", () => {
 
         it("returns nothing for an empty batch", async () => {
             const store = makeStore([], []);
-            const result = await updateDailyChainStats(store, [], [], [], []);
+            const result = await updateDailyChainStats(store, [], [], [], [], []);
             expect(result).toEqual({ dailyStats: [], activeAccounts: [] });
+        });
+
+        it("adds a later batch onto the stored transferred amount", async () => {
+            const existing = new DailyChainStats({
+                id: dayId,
+                date: utcDayStart(dayId),
+                blocksCount: 1,
+                txCount: 1,
+                activeAccounts: 1,
+                transferredAmount: 10n,
+            });
+            const store = makeStore([existing], []);
+            const alice = makeAccount("alice");
+            const bob = makeAccount("bob");
+            const block = makeBlock(103, day);
+            const extrinsic = makeExtrinsic({ id: "0xmore", timestamp: day, block, signer: alice });
+
+            const { dailyStats } = await updateDailyChainStats(
+                store,
+                [],
+                [],
+                [],
+                [makeTransfer("t3", day, block, alice, bob, 5n, extrinsic)],
+                [],
+            );
+
+            expect(dailyStats[0].transferredAmount).toEqual(15n);
         });
     });
 });

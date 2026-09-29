@@ -12,6 +12,8 @@ const path = require("path");
 const MIGRATIONS_DIR = path.join(__dirname, "../db/migrations");
 const GIN_MARKER = "IDX_multisig_signers_gin";
 const SEARCH_MARKER = "IDX_unified_transaction_hash_pattern";
+const CLEAN_REINDEX_REQUIRE = `const { assertCleanReindex } = require("../../scripts/require-clean-reindex")`;
+const CLEAN_REINDEX_CALL = `        await assertCleanReindex(db)`;
 
 const GIN_UP_LINES = [
     `        await db.query(` +
@@ -162,6 +164,44 @@ function patchDuplicateIndexAndFkNames(content) {
     return { content: patched, changed: true, indexRenames, fkRenames };
 }
 
+function patchCleanReindexGuard(content) {
+    const hasRequire = content.includes(CLEAN_REINDEX_REQUIRE);
+    const hasCall = content.includes(CLEAN_REINDEX_CALL);
+    if (hasRequire && hasCall) {
+        return { content, changed: false };
+    }
+
+    let patched = content;
+
+    if (!hasRequire) {
+        const exportNeedle = "module.exports = class ";
+        const exportIndex = patched.indexOf(exportNeedle);
+        if (exportIndex === -1) {
+            throw new Error("Could not find module.exports = class in migration file");
+        }
+        patched =
+            patched.slice(0, exportIndex) +
+            CLEAN_REINDEX_REQUIRE +
+            "\n\n" +
+            patched.slice(exportIndex);
+    }
+
+    if (!hasCall) {
+        const upNeedle = "    async up(db) {\n";
+        const upIndex = patched.indexOf(upNeedle);
+        if (upIndex === -1) {
+            throw new Error('Could not find "async up(db)" in migration file');
+        }
+        patched =
+            patched.slice(0, upIndex + upNeedle.length) +
+            CLEAN_REINDEX_CALL +
+            "\n" +
+            patched.slice(upIndex + upNeedle.length);
+    }
+
+    return { content: patched, changed: true };
+}
+
 function patchGinIndexes(content) {
     if (content.includes(GIN_MARKER)) {
         return { content, changed: false };
@@ -227,16 +267,21 @@ function main() {
     const filePath = path.join(MIGRATIONS_DIR, file);
     const original = fs.readFileSync(filePath, "utf8");
 
-    const dup = patchDuplicateIndexAndFkNames(original);
+    const clean = patchCleanReindexGuard(original);
+    const dup = patchDuplicateIndexAndFkNames(clean.content);
     const gin = patchGinIndexes(dup.content);
     const search = patchSearchIndexes(gin.content);
 
-    if (!dup.changed && !gin.changed && !search.changed) {
+    if (!clean.changed && !dup.changed && !gin.changed && !search.changed) {
         console.log(`[patch-migration-gin-indexes] ${file} already patched`);
         return;
     }
 
     fs.writeFileSync(filePath, search.content);
+
+    if (clean.changed) {
+        console.log(`[patch-migration-gin-indexes] Required a clean reindex in ${file}`);
+    }
 
     if (dup.changed) {
         for (const { oldName, newName, table, column } of dup.indexRenames) {
@@ -256,9 +301,15 @@ function main() {
     if (search.changed) {
         console.log(`[patch-migration-gin-indexes] Appended search/pattern indexes to ${file}`);
     }
-    if (!gin.changed && !search.changed) {
+    if (!gin.changed && !search.changed && !clean.changed) {
         console.log(`[patch-migration-gin-indexes] Patched ${file}`);
     }
 }
 
-main();
+module.exports = {
+    patchCleanReindexGuard,
+};
+
+if (require.main === module) {
+    main();
+}

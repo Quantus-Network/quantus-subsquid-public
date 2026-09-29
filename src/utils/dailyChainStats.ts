@@ -3,6 +3,7 @@ import {
     Block,
     DailyActiveAccount,
     DailyChainStats,
+    ExecutedReversibleTransfer,
     Extrinsic,
     Transfer,
     UnifiedTransaction,
@@ -16,6 +17,43 @@ export function isRewardUnifiedTransaction(tx: UnifiedTransaction): boolean {
 
 export function countNonRewardUnifiedTransactions(txs: UnifiedTransaction[]): number {
     return txs.reduce((n, tx) => n + (isRewardUnifiedTransaction(tx) ? 0 : 1), 0);
+}
+
+/** Transfer.amount when the row has an extrinsic; hashless mints and settlements contribute nothing. */
+export function signedTransferAmount(transfer: Transfer): bigint {
+    return transfer.extrinsic != null ? transfer.amount : 0n;
+}
+
+/**
+ * Scheduled amount when TransactionExecuted succeeded, including a transfer to the same account.
+ * A failed inner transfer contributes nothing. Fees are excluded.
+ */
+export function executedReversibleTransferAmount(executed: ExecutedReversibleTransfer): bigint {
+    if (executed.scheduledTransfer == null) {
+        throw new Error(`ExecutedReversibleTransfer ${executed.id} has no scheduledTransfer`);
+    }
+    if (executed.result !== "Ok" && executed.result !== "Err") {
+        throw new Error(`ExecutedReversibleTransfer ${executed.id} has result ${String(executed.result)}`);
+    }
+    if (executed.result === "Err") {
+        return 0n;
+    }
+    return executed.scheduledTransfer.amount;
+}
+
+/**
+ * Batch total of signed transfer amounts plus successful executed reversible amounts.
+ * Daily rollup uses the same two helpers, so the all-time sum matches the sum of daily buckets.
+ */
+export function sumTransferredAmount(transfers: Transfer[], executedReversibles: ExecutedReversibleTransfer[]): bigint {
+    let total = 0n;
+    for (const transfer of transfers) {
+        total += signedTransferAmount(transfer);
+    }
+    for (const executed of executedReversibles) {
+        total += executedReversibleTransferAmount(executed);
+    }
+    return total;
 }
 
 /** UTC calendar day key YYYY-MM-DD. */
@@ -36,6 +74,8 @@ export interface DailyRollupDelta {
     senderIds: Set<string>;
     /** Distinct Transfer.to ids (every transfer row, including hashless ones). */
     receiverIds: Set<string>;
+    /** Signed Transfer.amount plus successful executed reversible amount, raw token units. Fees excluded. */
+    transferredAmount: bigint;
 }
 
 /**
@@ -43,19 +83,28 @@ export interface DailyRollupDelta {
  * txCount excludes hashless IMMEDIATE rewards; activeAccounts uses Extrinsic.signer.
  * senderIds / receiverIds mirror Account.transfersFrom / transfersTo so the explorer
  * can count "sent in window" / "received in window" accounts without scanning transfers.
+ * transferredAmount is signed Transfer.amount plus successful executed reversible amount (fees excluded).
  */
 export function accumulateDailyRollupDeltas(
     blocks: Block[],
     unifiedTransactions: UnifiedTransaction[],
     extrinsics: Extrinsic[],
     transfers: Transfer[],
+    executedReversibles: ExecutedReversibleTransfer[],
 ): Map<string, DailyRollupDelta> {
     const dayDeltas = new Map<string, DailyRollupDelta>();
 
     const bump = (dayId: string): DailyRollupDelta => {
         let delta = dayDeltas.get(dayId);
         if (!delta) {
-            delta = { blocks: 0, txs: 0, signerIds: new Set(), senderIds: new Set(), receiverIds: new Set() };
+            delta = {
+                blocks: 0,
+                txs: 0,
+                signerIds: new Set(),
+                senderIds: new Set(),
+                receiverIds: new Set(),
+                transferredAmount: 0n,
+            };
             dayDeltas.set(dayId, delta);
         }
         return delta;
@@ -80,6 +129,11 @@ export function accumulateDailyRollupDeltas(
         const delta = bump(utcDayId(transfer.timestamp));
         delta.senderIds.add(transfer.from.id);
         delta.receiverIds.add(transfer.to.id);
+        delta.transferredAmount += signedTransferAmount(transfer);
+    }
+
+    for (const executed of executedReversibles) {
+        bump(utcDayId(executed.timestamp)).transferredAmount += executedReversibleTransferAmount(executed);
     }
 
     return dayDeltas;
@@ -106,8 +160,15 @@ export async function updateDailyChainStats(
     unifiedTransactions: UnifiedTransaction[],
     extrinsics: Extrinsic[],
     transfers: Transfer[],
+    executedReversibles: ExecutedReversibleTransfer[],
 ): Promise<{ dailyStats: DailyChainStats[]; activeAccounts: DailyActiveAccount[] }> {
-    const dayDeltas = accumulateDailyRollupDeltas(blocks, unifiedTransactions, extrinsics, transfers);
+    const dayDeltas = accumulateDailyRollupDeltas(
+        blocks,
+        unifiedTransactions,
+        extrinsics,
+        transfers,
+        executedReversibles,
+    );
     if (dayDeltas.size === 0) {
         return { dailyStats: [], activeAccounts: [] };
     }
@@ -178,12 +239,14 @@ export async function updateDailyChainStats(
                 blocksCount: 0,
                 txCount: 0,
                 activeAccounts: 0,
+                transferredAmount: 0n,
             });
         }
 
         stats.blocksCount += delta.blocks;
         stats.txCount += delta.txs;
         stats.activeAccounts += newSignersByDay.get(dayId) ?? 0;
+        stats.transferredAmount += delta.transferredAmount;
         dailyStats.push(stats);
     }
 

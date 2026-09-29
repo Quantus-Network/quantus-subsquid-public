@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, DateTimeColumn as DateTimeColumn_, Index as Index_, IntColumn as IntColumn_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, DateTimeColumn as DateTimeColumn_, Index as Index_, IntColumn as IntColumn_, BigIntColumn as BigIntColumn_} from "@subsquid/typeorm-store"
 
 /**
  * UTC calendar-day rollup for explorer home chart (id = YYYY-MM-DD)
@@ -36,4 +36,10 @@ export class DailyChainStats {
      */
     @IntColumn_({nullable: false})
     activeAccounts!: number
+
+    /**
+     * Signed transfer amounts plus successful executed reversible amounts on this UTC day, including a transfer to the same account, as a raw token amount. Fees are excluded.
+     */
+    @BigIntColumn_({nullable: false})
+    transferredAmount!: bigint
 }

@@ -77,18 +77,21 @@ This section covers starting everything from a clean slate.
 Once `npx sqd run` is active and the API has started (you'll see a log line like `[api] ... listening on port 4350`), you can access the GraphiQL interface in your browser at:
 `http://localhost:4350/graphql` (or your server's IP address if running remotely).
 
-## 7. Stopping and Resuming Normal Operation
+## 7. Stopping and Resuming
 
 *   **To Stop**: Press `Ctrl+C` in the terminal where `npx sqd run` is active. If running in `screen` or `tmux`, detach and then kill the `sqd run` process.
-*   **To Resume**: Simply navigate back to the `quantus-subsquid-public` directory and run:
+*   **To resume a database that already has `InitialSchema1790651935090` applied**:
     ```bash
     npx sqd run
     ```
-    The indexer will automatically pick up from the last block it successfully processed, as this state is stored in the database. You do **not** need to run `sqd down` or `migration:apply` for a normal resume.
+    The processor continues from the last processed block stored in the database.
+*   **To upgrade a database indexed by an earlier migration** (`InitialSchema1790152249086`): follow section 8. `npx sqd run` applies pending migrations and stops while indexer tables from the previous schema are still present. Chain totals are rebuilt from chain history after the database is dropped and the processor indexes from the start.
 
 ## 8. How to Resync (Full Reset - Wipe All Data)
 
-Use this if you need to clear all indexed data and start the sync completely from scratch (e.g., after critical schema changes or if you suspect data corruption).
+This schema version requires this reset for any database created by a previous migration. `npx sqd migration:apply` enforces that requirement: it refuses to create tables while indexer tables already exist.
+
+Use this reset to clear all indexed data and sync from scratch (schema upgrade, or suspected data corruption).
 
 1.  **Stop the running indexer** (see section 7).
 2.  **Take down the database (this wipes its data)**:
