@@ -25,6 +25,9 @@ export class Block {
     @DateTimeColumn_({nullable: false})
     timestamp!: Date
 
+    /**
+     * Miner payouts on this block, plus any historical treasury share. Transaction fees are already inside the miner payout.
+     */
     @BigIntColumn_({nullable: false})
     reward!: bigint
 

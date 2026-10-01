@@ -66,6 +66,12 @@ export class Account {
     @BooleanColumn_({nullable: false})
     isMultisig!: boolean
 
+    /**
+     * True once this account mined a block (denormalized so account-type reads do not probe `minedBlocks`).
+     */
+    @BooleanColumn_({nullable: false})
+    hasMinedBlocks!: boolean
+
     @OneToMany_(() => Transfer, e => e.to)
     transfersTo!: Transfer[]
 

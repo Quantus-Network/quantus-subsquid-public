@@ -2528,6 +2528,7 @@ export async function createMinerRewards(
         // MinerRewarded already includes this block's transaction fees.
         block.reward += reward;
         block.minedBy = miner;
+        miner.hasMinedBlocks = true;
 
         // Updating by reference or creating AccountStats for miner
         const accountStats = accountStatsMap.get(minerAddress);
@@ -3623,6 +3624,7 @@ function emptyAccount(id: string): Account {
         isHighSecurity: false,
         isGuardian: false,
         isMultisig: false,
+        hasMinedBlocks: false,
     });
 }
 

@@ -80,12 +80,12 @@ Once `npx sqd run` is active and the API has started (you'll see a log line like
 ## 7. Stopping and Resuming
 
 *   **To Stop**: Press `Ctrl+C` in the terminal where `npx sqd run` is active. If running in `screen` or `tmux`, detach and then kill the `sqd run` process.
-*   **To resume a database that already has `InitialSchema1790651935090` applied**:
+*   **To resume a database that already has `InitialSchema1790849787837` applied**:
     ```bash
     npx sqd run
     ```
     The processor continues from the last processed block stored in the database.
-*   **To upgrade a database indexed by an earlier migration** (`InitialSchema1790152249086`): follow section 8. `npx sqd run` applies pending migrations and stops while indexer tables from the previous schema are still present. Chain totals are rebuilt from chain history after the database is dropped and the processor indexes from the start.
+*   **To upgrade a database indexed by an earlier migration** (`InitialSchema1790651935090`): follow section 8. `npx sqd run` applies pending migrations and stops while indexer tables from the previous schema are still present. Chain totals are rebuilt from chain history after the database is dropped and the processor indexes from the start.
 
 ## 8. How to Resync (Full Reset - Wipe All Data)
 

@@ -1,7 +1,7 @@
 const { assertCleanReindex } = require("../../scripts/require-clean-reindex")
 
-module.exports = class InitialSchema1790651935090 {
-    name = 'InitialSchema1790651935090'
+module.exports = class InitialSchema1790849787837 {
+    name = 'InitialSchema1790849787837'
 
     async up(db) {
         await assertCleanReindex(db)
@@ -186,7 +186,7 @@ module.exports = class InitialSchema1790651935090 {
         await db.query(`CREATE INDEX "IDX_4e09ab06b0616ecc77fd5e07eb" ON "account_event" ("account_id", "incoming", "timestamp", "id") `)
         await db.query(`CREATE INDEX "IDX_81c87b748a03e8af3590c37f3f" ON "account_event" ("account_id", "outgoing", "timestamp", "id") `)
         await db.query(`CREATE INDEX "IDX_3828650fe5ccf62f6313e98f55" ON "account_event" ("account_id", "timestamp", "id") `)
-        await db.query(`CREATE TABLE "account" ("id" character varying NOT NULL, "free" numeric NOT NULL, "reserved" numeric NOT NULL, "frozen" numeric NOT NULL, "last_updated" integer NOT NULL, "is_deposit_only" boolean NOT NULL, "privacy_deposits" text NOT NULL, "is_high_security" boolean NOT NULL, "is_guardian" boolean NOT NULL, "is_multisig" boolean NOT NULL, CONSTRAINT "PK_54115ee388cdb6d86bb4bf5b2ea" PRIMARY KEY ("id"))`)
+        await db.query(`CREATE TABLE "account" ("id" character varying NOT NULL, "free" numeric NOT NULL, "reserved" numeric NOT NULL, "frozen" numeric NOT NULL, "last_updated" integer NOT NULL, "is_deposit_only" boolean NOT NULL, "privacy_deposits" text NOT NULL, "is_high_security" boolean NOT NULL, "is_guardian" boolean NOT NULL, "is_multisig" boolean NOT NULL, "has_mined_blocks" boolean NOT NULL, CONSTRAINT "PK_54115ee388cdb6d86bb4bf5b2ea" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_4738ffaab522f61de9e5717d56" ON "account" ("free") `)
         await db.query(`CREATE INDEX "IDX_2dddb640b4f864e7a11efb8569" ON "account" ("reserved") `)
         await db.query(`CREATE INDEX "IDX_1fed6f62b22dc8524e1faed387" ON "account" ("frozen") `)
