@@ -16,6 +16,8 @@ type Account @entity {
     isGuardian: Boolean!
     "True when this address is a Multisig account (denormalized for the account listing)."
     isMultisig: Boolean!
+    "True once this account mined a block (denormalized so account-type reads do not probe `minedBlocks`)."
+    hasMinedBlocks: Boolean!
     transfersTo: [Transfer!] @derivedFrom(field: "to")
     transfersFrom: [Transfer!] @derivedFrom(field: "from")
     "Extrinsics signed by this account"

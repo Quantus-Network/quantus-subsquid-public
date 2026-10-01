@@ -2054,6 +2054,7 @@ describe("applyAccountFlags — denormalized listing flags", () => {
                 isMultisig: true,
                 isHighSecurity: false,
                 isGuardian: false,
+                hasMinedBlocks: false,
                 lastUpdated: 7,
             }),
         );
@@ -2140,5 +2141,39 @@ describe("createMinerRewards", () => {
         );
 
         expect(blocks.find((b) => b.id === block.id)?.reward).toBe(1000n);
+    });
+
+    it("marks the miner as having mined blocks", async () => {
+        const firstTimeMiner = new Account({
+            id: "first-time-miner",
+            free: 0n,
+            reserved: 0n,
+            frozen: 0n,
+            lastUpdated: 0,
+            isDepositOnly: true,
+            privacyDeposits: "[]",
+            isHighSecurity: false,
+            isGuardian: false,
+            isMultisig: false,
+            hasMinedBlocks: false,
+        });
+
+        await createMinerRewards(
+            ctx as any,
+            [
+                {
+                    id: "mr-2",
+                    block: block.id,
+                    timestamp,
+                    miner: firstTimeMiner.id,
+                    reward: 1n,
+                },
+            ],
+            [],
+            new Map([[firstTimeMiner.id, firstTimeMiner]]),
+            new Map([[block.id, block]]),
+        );
+
+        expect(firstTimeMiner.hasMinedBlocks).toBe(true);
     });
 });

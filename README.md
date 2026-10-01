@@ -36,7 +36,7 @@ sqd build
 
 ## Running the Indexer
 
-`InitialSchema1790651935090` replaces `InitialSchema1790152249086`. TypeORM records applied migrations by name, so a database from the previous migration still looks pending. `sqd migration:apply` and `sqd run` refuse to continue while indexer tables are already present. Drop that database and reindex. The processor rebuilds chain totals from chain history.
+`InitialSchema1790849787837` replaces `InitialSchema1790651935090`. TypeORM records applied migrations by name, so a database from the previous migration still looks pending. `sqd migration:apply` and `sqd run` refuse to continue while indexer tables are already present. Drop that database and reindex. The processor rebuilds chain totals from chain history.
 
 **Clean reindex (required for a database created by an earlier migration):**
 ```bash
@@ -48,7 +48,7 @@ sqd run
 
 `sqd down` removes the local Postgres container. `docker-compose-dev.yml` does not mount a data volume, so the next `sqd up` is an empty database.
 
-**Resume when `InitialSchema1790651935090` is already applied:**
+**Resume when `InitialSchema1790849787837` is already applied:**
 ```bash
 sqd up
 sqd run
