@@ -1647,6 +1647,35 @@
           }
         }
       }
+    ],
+    "query_collections": [
+      {
+        "name": "rest",
+        "definition": {
+          "queries": [
+            {
+              "name": "get_chain_stats",
+              "query": "query get_chain_stats {\n  chain_stats: chain_stats_by_pk(id: \"global\") {\n    id\n    block_height\n    finalized_block_height\n    total_accounts\n    total_miners\n    total_deposit_accounts\n    total_immediate_transfers\n    total_scheduled_transfers\n    total_executed_transfers\n    total_cancelled_transfers\n    total_high_security_sets\n    total_multisigs_created\n    total_multisig_proposals\n    total_multisig_signer_approved\n    total_multisig_proposal_ready\n    total_multisig_proposals_executed\n    total_multisig_proposals_cancelled\n    total_multisig_proposals_removed\n    total_multisig_deposits_claimed\n    total_miner_rewards\n    total_error_events\n    total_tech_referenda\n    total_runtime_upgrades\n    max_supply\n    total_supply\n    circulating_supply\n    total_transferred_amount\n  }\n}"
+            }
+          ]
+        }
+      }
+    ],
+    "rest_endpoints": [
+      {
+        "name": "get_chain_stats",
+        "url": "chain-stats",
+        "methods": [
+          "GET"
+        ],
+        "definition": {
+          "query": {
+            "collection_name": "rest",
+            "query_name": "get_chain_stats"
+          }
+        },
+        "comment": "GET the singleton chain stats row (id = global)"
+      }
     ]
   }
 }
