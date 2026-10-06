@@ -8,7 +8,7 @@
         "build": "rm -rf lib && tsc",
         "format": "prettier --write \"src/**/*.ts\"",
         "format:check": "prettier --check \"src/**/*.ts\"",
-        "hasura:regenerate": "rm -rf hasura_metadata.json && npx squid-hasura-configuration regenerate && node scripts/patch-hasura-row-limit.js",
+        "hasura:regenerate": "rm -rf hasura_metadata.json && npx squid-hasura-configuration regenerate && node scripts/patch-hasura-row-limit.js && node scripts/patch-hasura-chain-stats-rest.js",
         "hasura:apply": "npx squid-hasura-configuration apply",
         "meta:update": "npx squid-substrate-metadata-explorer --rpc \"${RPC:?Set RPC env var}\" --out metadata.jsonl",
         "meta:add": "node scripts/add-genesis-metadata.js",
