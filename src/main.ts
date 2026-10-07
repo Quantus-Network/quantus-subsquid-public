@@ -96,6 +96,14 @@ import {
     serializeReferendumTally,
 } from "./tech-referenda";
 import {
+    CIRCULATING_SUPPLY_PATH,
+    createSupplyPool,
+    createSupplyTextServer,
+    readChainStatsSupply,
+    SUPPLY_TEXT_PORT,
+    TOTAL_SUPPLY_PATH,
+} from "./supplyText";
+import {
     circulatingSupply,
     getScheduledAt,
     getTargetBlockTimeMs,
@@ -144,6 +152,18 @@ if (process.env.NODE_ENV != "test") {
     if (!rpcUrl) throw new Error("RPC_ENDPOINT is not set");
     console.log(`***\n🔗 Processor Running on RPC endpoint: ${rpcUrl}\n***`);
     processor.setRpcEndpoint({ url: rpcUrl, ...RPC_SETTINGS });
+
+    const supplyPool = createSupplyPool();
+    const supplyServer = createSupplyTextServer((column) => readChainStatsSupply(supplyPool, column));
+    supplyServer.on("error", (error) => {
+        console.error(error);
+        process.exit(1);
+    });
+    supplyServer.listen(SUPPLY_TEXT_PORT, "0.0.0.0", () => {
+        console.log(
+            `Plain-text supply on :${SUPPLY_TEXT_PORT}${CIRCULATING_SUPPLY_PATH} and :${SUPPLY_TEXT_PORT}${TOTAL_SUPPLY_PATH}`,
+        );
+    });
 
     processor.run(new TypeormDatabase({ supportHotBlocks: true }), async (ctx) => {
         const processedEvents = await processBlockchainData(ctx);
