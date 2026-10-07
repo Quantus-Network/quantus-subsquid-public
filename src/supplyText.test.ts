@@ -9,13 +9,16 @@ import {
     TOTAL_SUPPLY_PATH,
     assertSupplyText,
     createSupplyTextServer,
+    formatSupplyAmount,
     readChainStatsSupply,
     type SupplyColumn,
     type SupplyQuery,
 } from "./supplyText";
 
-const CIRCULATING = "21000000000000000000";
-const TOTAL = "42000000000000000000";
+const CIRCULATING_RAW = "21000000000000000000";
+const TOTAL_RAW = "42000000000000000000";
+const CIRCULATING = "21000000";
+const TOTAL = "42000000";
 
 function request(
     port: number,
@@ -67,7 +70,7 @@ describe("plain-text supply endpoints", () => {
         await withServer(
             async (column) => {
                 columns.push(column);
-                return CIRCULATING;
+                return CIRCULATING_RAW;
             },
             async (port) => {
                 const response = await request(port, CIRCULATING_SUPPLY_PATH);
@@ -81,7 +84,7 @@ describe("plain-text supply endpoints", () => {
 
     it("returns total supply as text and nothing else", async () => {
         await withServer(
-            async (column) => (column === "total_supply" ? TOTAL : CIRCULATING),
+            async (column) => (column === "total_supply" ? TOTAL_RAW : CIRCULATING_RAW),
             async (port) => {
                 const response = await request(port, `${TOTAL_SUPPLY_PATH}?unused=1`);
                 expect(response.status).toBe(200);
@@ -93,7 +96,7 @@ describe("plain-text supply endpoints", () => {
 
     it("answers unknown paths and other methods with plain text not found", async () => {
         await withServer(
-            async () => CIRCULATING,
+            async () => CIRCULATING_RAW,
             async (port) => {
                 const missing = await request(port, "/api/rest/chain-stats");
                 const posted = await request(port, CIRCULATING_SUPPLY_PATH, "POST");
@@ -133,9 +136,31 @@ describe("plain-text supply endpoints", () => {
 
     it("rejects a supply value that is not a non-negative integer", () => {
         expect(assertSupplyText("0")).toBe("0");
-        expect(assertSupplyText(CIRCULATING)).toBe(CIRCULATING);
+        expect(assertSupplyText(CIRCULATING_RAW)).toBe(CIRCULATING_RAW);
         expect(() => assertSupplyText("12.5")).toThrow(/non-negative integer/);
         expect(() => assertSupplyText('{"circulating_supply":"1"}')).toThrow(/non-negative integer/);
+    });
+
+    it("divides the raw chain amount by the 10^12 token denominator", () => {
+        expect(formatSupplyAmount(CIRCULATING_RAW)).toBe(CIRCULATING);
+        expect(formatSupplyAmount(TOTAL_RAW)).toBe(TOTAL);
+        expect(formatSupplyAmount("0")).toBe("0");
+        expect(formatSupplyAmount("1500000000000")).toBe("1.5");
+        expect(formatSupplyAmount("1")).toBe("0.000000000001");
+        expect(formatSupplyAmount("1000000000001")).toBe("1.000000000001");
+        expect(() => formatSupplyAmount("1.5")).toThrow(/non-negative integer/);
+    });
+
+    it("returns the divided amount and nothing else", async () => {
+        await withServer(
+            async () => "1500000000000",
+            async (port) => {
+                const response = await request(port, CIRCULATING_SUPPLY_PATH);
+                expect(response.status).toBe(200);
+                expect(response.contentType).toBe("text/plain; charset=utf-8");
+                expect(response.body).toBe("1.5");
+            },
+        );
     });
 
     it("reads one numeric column from the global chain stats row", async () => {
@@ -143,11 +168,11 @@ describe("plain-text supply endpoints", () => {
         const client: SupplyQuery = {
             async query(sql, params) {
                 calls.push({ sql, params });
-                return { rows: [{ value: TOTAL }] };
+                return { rows: [{ value: TOTAL_RAW }] };
             },
         };
 
-        await expect(readChainStatsSupply(client, "total_supply")).resolves.toBe(TOTAL);
+        await expect(readChainStatsSupply(client, "total_supply")).resolves.toBe(TOTAL_RAW);
         expect(calls).toEqual([
             {
                 sql: "SELECT total_supply::text AS value FROM chain_stats WHERE id = $1",

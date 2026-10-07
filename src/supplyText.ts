@@ -11,6 +11,10 @@ export const PUBLIC_TOTAL_SUPPLY_PATH = "/api/rest/total-supply";
 const CHAIN_STATS_ID = "global";
 const TEXT_PLAIN = { "Content-Type": "text/plain; charset=utf-8" };
 
+/** One whole token is 10^12 raw chain units. */
+export const SUPPLY_DENOMINATOR = 10n ** 12n;
+const SUPPLY_DENOMINATOR_DIGITS = 12;
+
 const SUPPLY_COLUMNS = {
     [CIRCULATING_SUPPLY_PATH]: "circulating_supply",
     [TOTAL_SUPPLY_PATH]: "total_supply",
@@ -35,6 +39,21 @@ export function assertSupplyText(value: string): string {
         throw new Error(`supply value must be a non-negative integer, got ${JSON.stringify(value)}`);
     }
     return value;
+}
+
+/**
+ * Coin count for the plain-text endpoints. Chain stats stay raw integers;
+ * this divides by the token denominator and keeps only significant fraction digits.
+ */
+export function formatSupplyAmount(raw: string): string {
+    const value = BigInt(assertSupplyText(raw));
+    const whole = value / SUPPLY_DENOMINATOR;
+    const fraction = value % SUPPLY_DENOMINATOR;
+    if (fraction === 0n) {
+        return whole.toString();
+    }
+    const digits = fraction.toString().padStart(SUPPLY_DENOMINATOR_DIGITS, "0").replace(/0+$/, "");
+    return `${whole.toString()}.${digits}`;
 }
 
 export async function readChainStatsSupply(client: SupplyQuery, column: SupplyColumn): Promise<string | null> {
@@ -123,7 +142,7 @@ async function handleSupplyRequest(
             sendText(res, 404, `chain stats ${column} is missing`);
             return;
         }
-        sendText(res, 200, assertSupplyText(value));
+        sendText(res, 200, formatSupplyAmount(value));
     } catch (error) {
         const message = error instanceof Error ? error.message : "failed to read supply";
         if (!res.headersSent) {
