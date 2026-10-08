@@ -71,17 +71,16 @@ describe("hasura chain stats REST endpoint", () => {
         const metadata = JSON.parse(raw);
 
         expect(metadata.metadata.allowlist).toBeUndefined();
-        const collection = metadata.metadata.query_collections.find(
-            (entry: { name: string }) => entry.name === "rest",
-        );
-        const query = collection.definition.queries.find(
-            (entry: { name: string }) => entry.name === "get_chain_stats",
-        );
+        const collection = metadata.metadata.query_collections.find((entry: { name: string }) => entry.name === "rest");
+        const query = collection.definition.queries.find((entry: { name: string }) => entry.name === "get_chain_stats");
         const endpoint = metadata.metadata.rest_endpoints.find(
             (entry: { name: string }) => entry.name === "get_chain_stats",
         );
 
         expect(query.query).toBe(GET_CHAIN_STATS_QUERY);
+        expect(metadata.metadata.rest_endpoints.map((entry: { name: string }) => entry.name)).toEqual([
+            "get_chain_stats",
+        ]);
         expect(endpoint).toEqual({
             name: "get_chain_stats",
             url: CHAIN_STATS_REST_URL,
