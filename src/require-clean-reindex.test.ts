@@ -7,11 +7,11 @@ type QueryDb = {
     query: (sql: string) => Promise<unknown>;
 };
 
-function migrationPaths(): string[] {
+function initialMigrationPaths(): string[] {
     const dir = path.join(__dirname, "../db/migrations");
     return fs
         .readdirSync(dir)
-        .filter((name) => name.endsWith(".js"))
+        .filter((name) => name.endsWith("-InitialSchema.js"))
         .sort()
         .map((name) => path.join(dir, name));
 }
@@ -81,13 +81,13 @@ describe("clean reindex enforcement", () => {
         ).rejects.toThrow("to_regclass('public.extrinsic')");
     });
 
-    it.each(migrationPaths())("refuses a retained database before CREATE TABLE (%s)", async (filePath) => {
+    it.each(initialMigrationPaths())("refuses a retained database before CREATE TABLE (%s)", async (filePath) => {
         const { db, queries } = fakeDb("extrinsic");
         await expect(loadMigration(filePath).up(db)).rejects.toThrow(CLEAN_REINDEX_REQUIRED);
         expect(queries.some((sql) => sql.includes("CREATE TABLE"))).toBe(false);
     });
 
-    it.each(migrationPaths())("creates tables on an empty database (%s)", async (filePath) => {
+    it.each(initialMigrationPaths())("creates tables on an empty database (%s)", async (filePath) => {
         const { db, queries } = fakeDb(null);
         await loadMigration(filePath).up(db);
         expect(queries[0]).toBe(RETAINED_SCHEMA_SQL);

@@ -54,6 +54,8 @@ sqd up
 sqd run
 ```
 
+`ExtrinsicHash1791506849735` applies on top of an existing database without a reindex; it backfills `extrinsic.hash` from `extrinsic.id`.
+
 Start the processor and GraphQL API:
 
 ```bash
