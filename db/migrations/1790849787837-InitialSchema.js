@@ -1,12 +1,11 @@
 const { assertCleanReindex } = require("../../scripts/require-clean-reindex")
 
-module.exports = class InitialSchema1791505330180 {
-    name = 'InitialSchema1791505330180'
+module.exports = class InitialSchema1790849787837 {
+    name = 'InitialSchema1790849787837'
 
     async up(db) {
         await assertCleanReindex(db)
-        await db.query(`CREATE TABLE "extrinsic" ("id" character varying NOT NULL, "hash" text NOT NULL, "index_in_block" integer NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "pallet" text NOT NULL, "call" text NOT NULL, "args" text NOT NULL, "success" boolean NOT NULL, "fee" numeric NOT NULL, "block_id" character varying, "signer_id" character varying, CONSTRAINT "PK_80d7db0e4b1e83e30336bc76755" PRIMARY KEY ("id"))`)
-        await db.query(`CREATE INDEX "IDX_1f45de0713a55049009e8e8127" ON "extrinsic" ("hash") `)
+        await db.query(`CREATE TABLE "extrinsic" ("id" character varying NOT NULL, "index_in_block" integer NOT NULL, "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL, "pallet" text NOT NULL, "call" text NOT NULL, "args" text NOT NULL, "success" boolean NOT NULL, "fee" numeric NOT NULL, "block_id" character varying, "signer_id" character varying, CONSTRAINT "PK_80d7db0e4b1e83e30336bc76755" PRIMARY KEY ("id"))`)
         await db.query(`CREATE INDEX "IDX_a3b99daba1259dab0dd040d4f7" ON "extrinsic" ("block_id") `)
         await db.query(`CREATE INDEX "IDX_e73266d043b897ec3ff58d5fb5" ON "extrinsic" ("index_in_block") `)
         await db.query(`CREATE INDEX "IDX_6e232918078798b1fade21dcf8" ON "extrinsic" ("timestamp") `)
@@ -364,7 +363,6 @@ module.exports = class InitialSchema1791505330180 {
         await db.query(`DROP INDEX "IDX_multisig_proposal_approvals_gin"`)
         await db.query(`DROP INDEX "IDX_multisig_signers_gin"`)
         await db.query(`DROP TABLE "extrinsic"`)
-        await db.query(`DROP INDEX "public"."IDX_1f45de0713a55049009e8e8127"`)
         await db.query(`DROP INDEX "public"."IDX_a3b99daba1259dab0dd040d4f7"`)
         await db.query(`DROP INDEX "public"."IDX_e73266d043b897ec3ff58d5fb5"`)
         await db.query(`DROP INDEX "public"."IDX_6e232918078798b1fade21dcf8"`)
