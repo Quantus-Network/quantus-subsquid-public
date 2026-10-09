@@ -22,6 +22,8 @@ import {
     createEvents,
     applyAccountFlags,
     createMinerRewards,
+    processBlockchainData,
+    createExtrinsics,
 } from "./main";
 import { events, storage } from "./generated_types";
 import {
@@ -84,7 +86,7 @@ describe("createReversibleTransfers", () => {
                 amount: 100n,
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: "0xabc",
+                extrinsicId: "0xabc",
                 scheduledAt: new Date(Date.now() + 10000),
             },
         ];
@@ -118,7 +120,7 @@ describe("createReversibleTransfers", () => {
                 amount: 100n,
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: "0xabc",
+                extrinsicId: "0xabc",
                 scheduledAt: new Date(Date.now() + 10000),
             },
         ];
@@ -130,7 +132,7 @@ describe("createReversibleTransfers", () => {
                 who: "from-address",
                 block: "block-1",
                 timestamp: cancelTimestamp,
-                extrinsicHash: "0xabc",
+                extrinsicId: "0xabc",
             },
         ];
 
@@ -163,7 +165,7 @@ describe("createReversibleTransfers", () => {
                 amount: 100n,
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: "0xabc",
+                extrinsicId: "0xabc",
                 scheduledAt: new Date(Date.now() + 10000),
             },
         ];
@@ -200,7 +202,7 @@ describe("createReversibleTransfers", () => {
             amount: 200n,
             block: mockBlocks.get("block-1"),
             timestamp: new Date(),
-            extrinsicHash: "0xdef",
+            extrinsicId: "0xdef",
             scheduledAt: new Date(Date.now() + 20000),
         };
         (mockStore as any).find = async () => [existingScheduled];
@@ -213,7 +215,7 @@ describe("createReversibleTransfers", () => {
                 who: "canceller-address",
                 block: "block-1",
                 timestamp: cancelTimestamp,
-                extrinsicHash: "0xdef",
+                extrinsicId: "0xdef",
             },
         ];
 
@@ -244,7 +246,7 @@ describe("createReversibleTransfers", () => {
             amount: 300n,
             block: mockBlocks.get("block-1"),
             timestamp: new Date(),
-            extrinsicHash: "0xghi",
+            extrinsicId: "0xghi",
             scheduledAt: new Date(Date.now() + 30000),
         };
         (mockStore as any).find = async () => [existingScheduled];
@@ -451,9 +453,10 @@ describe("createMultisigProposals", () => {
         mockStorageGet?.mockRestore();
     });
 
-    const registerMockExtrinsic = (hash: string, signer = mockAccounts.get(ALICE_ADDR)): Extrinsic => {
+    const registerMockExtrinsic = (id: string, signer = mockAccounts.get(ALICE_ADDR)): Extrinsic => {
         const extrinsic = new Extrinsic({
-            id: hash,
+            id,
+            hash: id,
             block: mockBlocks.get("block-1")!,
             indexInBlock: 0,
             timestamp: new Date(),
@@ -464,7 +467,7 @@ describe("createMultisigProposals", () => {
             success: true,
             fee: 0n,
         });
-        mockExtrinsics.set(hash, extrinsic);
+        mockExtrinsics.set(id, extrinsic);
         return extrinsic;
     };
 
@@ -692,16 +695,16 @@ describe("createMultisigProposals", () => {
     });
 
     it("should price each proposal of a batched extrinsic from the runtime constants", async () => {
-        // Two propose() calls in one Utility.batch share an extrinsic hash and proposer; each
+        // Two propose() calls in one Utility.batch share an extrinsic id and proposer; each
         // burns proposal_fee(signers) on its own, so neither may see the other's fee.
-        const extrinsicHash = "ext-propose-batch";
+        const extrinsicId = "ext-propose-batch";
         const networkFee = 9_244_906_214n;
         const processedEvents = emptyProcessedEvents();
         processedEvents.multisigProposalCreatedEvents = [3, 4].map((proposalId) => ({
             id: `evt-prop-${proposalId}`,
             block: "block-1",
             timestamp: new Date(),
-            extrinsicHash,
+            extrinsicId,
             fee: networkFee,
             multisigAddress: MULTISIG_ADDR,
             proposer: ALICE_ADDR,
@@ -726,8 +729,8 @@ describe("createMultisigProposals", () => {
     });
 
     it("should execute a proposal in the same batch", async () => {
-        const executeExtrinsicHash = "ext-execute-1";
-        const executeExtrinsic = registerMockExtrinsic(executeExtrinsicHash);
+        const executeExtrinsicId = "ext-execute-1";
+        const executeExtrinsic = registerMockExtrinsic(executeExtrinsicId);
 
         const processedEvents = emptyProcessedEvents();
         processedEvents.multisigProposalCreatedEvents = [
@@ -735,7 +738,7 @@ describe("createMultisigProposals", () => {
                 id: "evt-prop",
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: "ext-propose-1",
+                extrinsicId: "ext-propose-1",
                 multisigAddress: MULTISIG_ADDR,
                 proposer: ALICE_ADDR,
                 proposalId: 1,
@@ -747,7 +750,7 @@ describe("createMultisigProposals", () => {
                 id: "evt-exec",
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: executeExtrinsicHash,
+                extrinsicId: executeExtrinsicId,
                 multisigAddress: MULTISIG_ADDR,
                 proposalId: 1,
                 proposer: ALICE_ADDR,
@@ -794,8 +797,8 @@ describe("createMultisigProposals", () => {
         (mockStore as any).find = async () => [existingProposal];
         (mockStore as any).findOne = async () => multisigs[0];
 
-        const executeExtrinsicHash = "ext-execute-2";
-        const executeExtrinsic = registerMockExtrinsic(executeExtrinsicHash);
+        const executeExtrinsicId = "ext-execute-2";
+        const executeExtrinsic = registerMockExtrinsic(executeExtrinsicId);
 
         const processedEvents = emptyProcessedEvents();
         processedEvents.multisigProposalExecutedEvents = [
@@ -803,7 +806,7 @@ describe("createMultisigProposals", () => {
                 id: "evt-exec-2",
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: executeExtrinsicHash,
+                extrinsicId: executeExtrinsicId,
                 multisigAddress: MULTISIG_ADDR,
                 proposalId: 2,
                 proposer: ALICE_ADDR,
@@ -835,7 +838,7 @@ describe("createMultisigProposals", () => {
         id: "evt-exec-fail",
         block: "block-1",
         timestamp: new Date(),
-        extrinsicHash: "ext-execute-fail",
+        extrinsicId: "ext-execute-fail",
         multisigAddress: MULTISIG_ADDR,
         proposalId: 9,
         proposer: ALICE_ADDR,
@@ -847,7 +850,7 @@ describe("createMultisigProposals", () => {
 
     it("should fail when execute extrinsic is missing from map", async () => {
         const processedEvents = emptyProcessedEvents();
-        processedEvents.multisigProposalExecutedEvents = [buildExecutedEvent({ extrinsicHash: "ext-missing" })];
+        processedEvents.multisigProposalExecutedEvents = [buildExecutedEvent({ extrinsicId: "ext-missing" })];
 
         await expect(
             createMultisigProposals(mockCtx, processedEvents, multisigs, mockAccounts, mockBlocks, mockExtrinsics),
@@ -855,11 +858,12 @@ describe("createMultisigProposals", () => {
     });
 
     it("should fail when execute extrinsic has no signer", async () => {
-        const executeExtrinsicHash = "ext-execute-no-signer";
+        const executeExtrinsicId = "ext-execute-no-signer";
         mockExtrinsics.set(
-            executeExtrinsicHash,
+            executeExtrinsicId,
             new Extrinsic({
-                id: executeExtrinsicHash,
+                id: executeExtrinsicId,
+                hash: executeExtrinsicId,
                 block: mockBlocks.get("block-1")!,
                 indexInBlock: 0,
                 timestamp: new Date(),
@@ -873,7 +877,7 @@ describe("createMultisigProposals", () => {
         );
 
         const processedEvents = emptyProcessedEvents();
-        processedEvents.multisigProposalExecutedEvents = [buildExecutedEvent({ extrinsicHash: executeExtrinsicHash })];
+        processedEvents.multisigProposalExecutedEvents = [buildExecutedEvent({ extrinsicId: executeExtrinsicId })];
 
         await expect(
             createMultisigProposals(mockCtx, processedEvents, multisigs, mockAccounts, mockBlocks, mockExtrinsics),
@@ -884,8 +888,8 @@ describe("createMultisigProposals", () => {
         mockStorageGet.mockResolvedValue(undefined);
 
         const executedCall = new Uint8Array([4, 5, 6]);
-        const executeExtrinsicHash = "ext-execute-3";
-        const executeExtrinsic = registerMockExtrinsic(executeExtrinsicHash);
+        const executeExtrinsicId = "ext-execute-3";
+        const executeExtrinsic = registerMockExtrinsic(executeExtrinsicId);
 
         const processedEvents = emptyProcessedEvents();
         processedEvents.multisigProposalCreatedEvents = [
@@ -893,7 +897,7 @@ describe("createMultisigProposals", () => {
                 id: "evt-prop",
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: "ext-propose-3",
+                extrinsicId: "ext-propose-3",
                 multisigAddress: MULTISIG_ADDR,
                 proposer: ALICE_ADDR,
                 proposalId: 3,
@@ -905,7 +909,7 @@ describe("createMultisigProposals", () => {
                 id: "evt-exec",
                 block: "block-1",
                 timestamp: new Date(),
-                extrinsicHash: executeExtrinsicHash,
+                extrinsicId: executeExtrinsicId,
                 multisigAddress: MULTISIG_ADDR,
                 proposalId: 3,
                 proposer: ALICE_ADDR,
@@ -1043,6 +1047,7 @@ describe("buildUnifiedTransactions", () => {
     });
     const extrinsic = new Extrinsic({
         id: "0xext",
+        hash: "0xext",
         block,
         indexInBlock: 0,
         timestamp: block.timestamp,
@@ -1055,6 +1060,7 @@ describe("buildUnifiedTransactions", () => {
     });
     const wormholeExtrinsic = new Extrinsic({
         id: "0xwh",
+        hash: "0xwh",
         block,
         indexInBlock: 1,
         timestamp: block.timestamp,
@@ -1407,7 +1413,7 @@ describe("buildUnifiedTransactions", () => {
         expect(rows[0].from?.id).toEqual("from");
         expect(rows[0].to?.id).toEqual("to");
         expect(rows[0].amount).toEqual(200n);
-        expect(rows[0].hash).toEqual("0xwh");
+        expect(rows[0].hash).toBeUndefined();
         expect(rows[0].detailId).toEqual("0xwh");
         expect(rows.find((r) => r.id === "immediate:t-exit")).toBeUndefined();
         expect(rows.find((r) => r.id === "wormhole:0xwh")).toBeUndefined();
@@ -1501,7 +1507,7 @@ describe("updateAndCreateAccounts — wormhole miner volume fee", () => {
     const MINT_ADDR = "qzMintSentinel";
     const AUTHOR_ADDR = "qzBlockAuthor";
     const EXIT_ADDR = "qzExitRecipient";
-    const EXT_HASH = "0xwormhole-verify";
+    const EXT_ID = "0xwormhole-verify";
     const EXIT_AMOUNT = 2_220_000_000_000n;
     const MINER_FEE = 1_111_111_111n;
 
@@ -1520,14 +1526,14 @@ describe("updateAndCreateAccounts — wormhole miner volume fee", () => {
         events.wormholeProofVerifiedEvents.push({
             id: "evt-pv",
             ...baseEvent,
-            extrinsicHash: EXT_HASH,
+            extrinsicId: EXT_ID,
             exitAmount,
             nullifiers: [],
         });
         events.wormholeNativeTransferredEvents.push({
             id: "evt-nt-exit",
             ...baseEvent,
-            extrinsicHash: EXT_HASH,
+            extrinsicId: EXT_ID,
             from: MINT_ADDR,
             to: exitTo,
             amount: exitAmount,
@@ -1538,7 +1544,7 @@ describe("updateAndCreateAccounts — wormhole miner volume fee", () => {
         events.mintedEvents.push({
             id: "evt-mint-exit",
             ...baseEvent,
-            extrinsicHash: EXT_HASH,
+            extrinsicId: EXT_ID,
             who: exitTo,
             amount: exitAmount,
         });
@@ -1547,7 +1553,7 @@ describe("updateAndCreateAccounts — wormhole miner volume fee", () => {
             events.mintedEvents.push({
                 id: "evt-mint-fee",
                 ...baseEvent,
-                extrinsicHash: EXT_HASH,
+                extrinsicId: EXT_ID,
                 who: AUTHOR_ADDR,
                 amount: minerFee,
             });
@@ -1602,7 +1608,7 @@ describe("updateAndCreateAccounts — wormhole miner volume fee", () => {
         events.wormholeMinerVolumeFeeEvents.push({
             id: "evt-fee",
             ...baseEvent,
-            extrinsicHash: EXT_HASH,
+            extrinsicId: EXT_ID,
             miner: AUTHOR_ADDR,
             amount: MINER_FEE,
         });
@@ -1621,7 +1627,7 @@ describe("updateAndCreateAccounts — wormhole miner volume fee", () => {
         events.wormholeMinerVolumeFeeEvents.push({
             id: "evt-fee",
             ...baseEvent,
-            extrinsicHash: EXT_HASH,
+            extrinsicId: EXT_ID,
             miner: AUTHOR_ADDR,
             amount: MINER_FEE,
         });
@@ -1710,6 +1716,7 @@ describe("createAccountEventEntries — direction flags", () => {
     const bob = account("bob");
     const extrinsic = new Extrinsic({
         id: "0xext",
+        hash: "0xext",
         block,
         indexInBlock: 0,
         timestamp: block.timestamp,
@@ -2175,5 +2182,61 @@ describe("createMinerRewards", () => {
         );
 
         expect(firstTimeMiner.hasMinedBlocks).toBe(true);
+    });
+});
+
+describe("extrinsic replayed in a later block (same hash)", () => {
+    const REPLAYED_HASH = "0xea4c5a21fec33f837bb682e932b45fdca6e8a173702bcd634e95ebdf180b6972";
+    const SIGNER = "0x36ba9b54f22fa558dd12a5c98c8578faa6ad2a4b8935daf096b56603cebbe777";
+    const FIRST_ID = "0000188789-2f623-000001";
+    const REPLAY_ID = "0000189030-98caf-000001";
+
+    const chainBlock = (height: number, extrinsicId: string) => ({
+        header: { id: `block-${height}`, height, hash: `0xblock${height}`, timestamp: height * 1000 },
+        events: [
+            {
+                id: `${extrinsicId}-event`,
+                name: "System.Remarked",
+                extrinsic: { id: extrinsicId, hash: REPLAYED_HASH, index: 1, success: true, fee: 1n },
+                call: {
+                    name: "Balances.transfer_allow_death",
+                    args: {},
+                    origin: { __kind: "system", value: { __kind: "Signed", value: SIGNER } },
+                },
+            },
+        ],
+    });
+
+    const ctxWith = (blocks: ReturnType<typeof chainBlock>[], indexedExtrinsicIds: string[]) =>
+        ({
+            blocks,
+            store: {
+                find: async (): Promise<any[]> => [],
+                findBy: async (entity: unknown): Promise<any[]> =>
+                    entity === Extrinsic ? indexedExtrinsicIds.map((id) => ({ id })) : [],
+            },
+        }) as any;
+
+    it("keeps both inclusions, first by hash and the replay by a suffixed id", async () => {
+        const ctx = ctxWith([chainBlock(188789, FIRST_ID), chainBlock(189030, REPLAY_ID)], []);
+        const processed = await processBlockchainData(ctx);
+        expect([...processed.extrinsics.keys()]).toEqual([FIRST_ID, REPLAY_ID]);
+
+        const { extrinsics } = await createExtrinsics(ctx, processed, new Map(), processed.blocks);
+
+        expect(extrinsics.get(FIRST_ID)!.id).toEqual(REPLAYED_HASH);
+        expect(extrinsics.get(REPLAY_ID)!.id).toEqual(`${REPLAYED_HASH}-${REPLAY_ID}`);
+        expect(extrinsics.get(REPLAY_ID)!.block.height).toEqual(189030);
+        expect([...extrinsics.values()].every((e) => e.hash === REPLAYED_HASH)).toBe(true);
+    });
+
+    it("suffixes the replay when the first inclusion was indexed in an earlier batch", async () => {
+        const ctx = ctxWith([chainBlock(189030, REPLAY_ID)], [REPLAYED_HASH]);
+        const processed = await processBlockchainData(ctx);
+
+        const { extrinsics } = await createExtrinsics(ctx, processed, new Map(), processed.blocks);
+
+        expect(extrinsics.get(REPLAY_ID)!.id).toEqual(`${REPLAYED_HASH}-${REPLAY_ID}`);
+        expect(extrinsics.get(REPLAY_ID)!.hash).toEqual(REPLAYED_HASH);
     });
 });

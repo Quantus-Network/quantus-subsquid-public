@@ -483,7 +483,7 @@ function filterLargeArgs(args: Record<string, unknown>): Record<string, unknown>
     return filtered;
 }
 
-async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<ProcessedEvents> {
+export async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<ProcessedEvents> {
     const blocks: Map<string, Block> = new Map();
     const transferEvents: TransferEvent[] = [];
     const endowedEvents: AccountBalanceEvent[] = [];
@@ -500,8 +500,8 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
     const suspendedEvents: AccountBalanceEvent[] = [];
     const restoredEvents: AccountBalanceEvent[] = [];
     const upgradedEvents: Omit<AccountBalanceEvent, "amount">[] = [];
-    const issuedEvents: Omit<BalanceEventData, "extrinsicHash">[] = [];
-    const rescindedEvents: Omit<BalanceEventData, "extrinsicHash">[] = [];
+    const issuedEvents: Omit<BalanceEventData, "extrinsicId">[] = [];
+    const rescindedEvents: Omit<BalanceEventData, "extrinsicId">[] = [];
     const lockedEvents: AccountBalanceEvent[] = [];
     const unlockedEvents: AccountBalanceEvent[] = [];
     const frozenEvents: AccountBalanceEvent[] = [];
@@ -572,11 +572,10 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
 
         let currentEventIndex = 0;
         for (let event of block.events) {
-            const extrinsicHash = event.extrinsic?.hash;
+            const extrinsicId = event.extrinsic?.id;
             const fee = event.extrinsic?.fee || 0n;
 
-            // Collect extrinsic data (deduplicated by hash)
-            if (event.extrinsic && extrinsicHash && !extrinsics.has(extrinsicHash)) {
+            if (event.extrinsic && extrinsicId && !extrinsics.has(extrinsicId)) {
                 const call = event.call;
                 if (call) {
                     // Parse pallet and call name from call.name (e.g., "Balances.transfer_keep_alive")
@@ -598,8 +597,9 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         // Filter out signatures and proofs from args (too big to store)
                         const filteredArgs = filterLargeArgs(call.args);
 
-                        extrinsics.set(extrinsicHash, {
-                            id: extrinsicHash,
+                        assert(event.extrinsic.hash, `Extrinsic ${extrinsicId} has no hash`);
+                        extrinsics.set(extrinsicId, {
+                            hash: event.extrinsic.hash,
                             block: block.header.id,
                             indexInBlock: event.extrinsic.index,
                             timestamp: new Date(block.header.timestamp!),
@@ -625,7 +625,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(account),
                         amount: amount,
                     });
@@ -642,7 +642,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         from: ss58Encode(transferFrom),
                         to: ss58Encode(transferTo),
                         amount: transferAmount,
@@ -657,7 +657,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         free: free,
                     });
@@ -669,7 +669,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -681,7 +681,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -694,7 +694,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         from: ss58Encode(from),
                         to: ss58Encode(to),
                         amount: amount,
@@ -708,7 +708,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -720,7 +720,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -732,7 +732,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -744,7 +744,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -756,7 +756,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -768,7 +768,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -780,7 +780,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         amount: amount,
                     });
@@ -792,7 +792,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                     });
                     break;
@@ -808,7 +808,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         txId: txId,
                         from: ss58Encode(from),
                         to: ss58Encode(to),
@@ -843,7 +843,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         txId: txId,
                         who: ss58Encode(who),
                     });
@@ -974,7 +974,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         errorType: resolved.errorType,
                         errorModule: resolved.errorModule,
                         errorName: resolved.errorName,
@@ -990,7 +990,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         who: ss58Encode(who),
                         guardian: ss58Encode(guardian),
                         delay: delayValue,
@@ -1003,7 +1003,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
 
                     // Reversible transfer execution emits: Balances.Transfer -> NativeTransferred -> TransactionExecuted
                     // When there's no extrinsic, check if the next event is TransactionExecuted
-                    if (!extrinsicHash) {
+                    if (!extrinsicId) {
                         const nextEvent = block.events[currentEventIndex + 1];
                         if (nextEvent?.name === events.reversibleTransfers.transactionExecuted.name) {
                             const { txId } = events.reversibleTransfers.transactionExecuted.v126.decode(nextEvent);
@@ -1015,7 +1015,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         from: ss58Encode(from),
                         to: ss58Encode(to),
                         amount: amount,
@@ -1038,7 +1038,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         exitAmount: exitAmount,
                         nullifiers: parsedNullifiers,
                     });
@@ -1050,7 +1050,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         miner: ss58Encode(miner),
                         amount: amount,
                     });
@@ -1063,7 +1063,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         fee,
                         creator: ss58Encode(creator),
                         multisigAddress: ss58Encode(multisigAddress),
@@ -1080,7 +1080,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         fee,
                         multisigAddress: ss58Encode(multisigAddress),
                         proposer: ss58Encode(proposer),
@@ -1096,7 +1096,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         fee,
                         multisigAddress: ss58Encode(multisigAddress),
                         approver: ss58Encode(approver),
@@ -1112,7 +1112,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         fee,
                         multisigAddress: ss58Encode(multisigAddress),
                         proposalId,
@@ -1121,9 +1121,9 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                     break;
                 }
                 case events.multisig.proposalExecuted.name: {
-                    assert(extrinsicHash, `Extrinsic hash not found for proposal executed event ${event.id}`);
+                    assert(extrinsicId, `Extrinsic id not found for proposal executed event ${event.id}`);
                     assert(
-                        extrinsics.get(extrinsicHash)?.signer,
+                        extrinsics.get(extrinsicId)?.signer,
                         `Extrinsic signer not collected for proposal executed event ${event.id}`,
                     );
                     const { multisigAddress, proposalId, proposer, call, approvers, result } =
@@ -1132,7 +1132,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         fee,
                         multisigAddress: ss58Encode(multisigAddress),
                         proposalId,
@@ -1150,7 +1150,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         fee,
                         multisigAddress: ss58Encode(multisigAddress),
                         proposer: ss58Encode(proposer),
@@ -1165,7 +1165,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         fee,
                         multisigAddress: ss58Encode(multisigAddress),
                         proposer: ss58Encode(proposer),
@@ -1183,7 +1183,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash: extrinsicHash,
+                        extrinsicId: extrinsicId,
                         fee,
                         multisigAddress: ss58Encode(multisigAddress),
                         claimer: ss58Encode(claimer),
@@ -1198,11 +1198,11 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                         track,
                         proposal,
-                        submittedBy: extrinsicHash ? extrinsics.get(extrinsicHash)?.signer : undefined,
+                        submittedBy: extrinsicId ? extrinsics.get(extrinsicId)?.signer : undefined,
                     });
                     break;
                 }
@@ -1212,7 +1212,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                         track,
                         proposal,
@@ -1226,7 +1226,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                     });
                     break;
@@ -1237,7 +1237,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                     });
                     break;
@@ -1248,7 +1248,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                         tally,
                     });
@@ -1260,7 +1260,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                     });
                     break;
@@ -1271,7 +1271,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                         tally,
                     });
@@ -1283,7 +1283,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                         tally,
                     });
@@ -1295,7 +1295,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                         tally,
                     });
@@ -1307,7 +1307,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         index,
                         tally,
                     });
@@ -1318,7 +1318,7 @@ async function processBlockchainData(ctx: ProcessorContext<Store>): Promise<Proc
                         id: event.id,
                         block: block.header.id,
                         timestamp: new Date(block.header.timestamp),
-                        extrinsicHash,
+                        extrinsicId,
                         specVersion: await resolvePostUpgradeSpecVersion(ctx, block.header.height),
                     });
                     break;
@@ -1573,7 +1573,7 @@ export async function updateAndCreateAccounts(
     // block-0 snapshot, so only the leaf's transfer row is kept, not a second credit.
     const genesisLeafBlock = ctx.blocks.find((b) => b.header.height === 1)?.header.id;
     const isGenesisLeaf = (t: WormholeNativeTransferredEvent) =>
-        t.block === genesisLeafBlock && t.from === MINTING_ACCOUNT_ADDRESS && !t.extrinsicHash && loadedIds.has(t.to);
+        t.block === genesisLeafBlock && t.from === MINTING_ACCOUNT_ADDRESS && !t.extrinsicId && loadedIds.has(t.to);
 
     for (const t of processedEvents.wormholeNativeTransferredEvents) {
         if (isGenesisLeaf(t)) continue;
@@ -1658,8 +1658,8 @@ export async function updateAndCreateAccounts(
     // explicit Wormhole.MinerVolumeFeePaid event — credit it directly.
     const extrinsicsWithFeeEvent = new Set(
         processedEvents.wormholeMinerVolumeFeeEvents
-            .map((e) => e.extrinsicHash)
-            .filter((hash): hash is string => Boolean(hash)),
+            .map((e) => e.extrinsicId)
+            .filter((id): id is string => Boolean(id)),
     );
     for (const t of processedEvents.wormholeMinerVolumeFeeEvents) {
         const miner = getOrCreateAccount(t.miner, lastBlockHeight);
@@ -1675,24 +1675,22 @@ export async function updateAndCreateAccounts(
     // extrinsics where MinerVolumeFeePaid already covered it. All other Minted events
     // are intentionally ignored to avoid double-counting.
     const proofVerifiedExtrinsics = new Set(
-        processedEvents.wormholeProofVerifiedEvents
-            .map((e) => e.extrinsicHash)
-            .filter((hash): hash is string => Boolean(hash)),
+        processedEvents.wormholeProofVerifiedEvents.map((e) => e.extrinsicId).filter((id): id is string => Boolean(id)),
     );
     const unmatchedExitsByExtrinsic = new Map<string, WormholeNativeTransferredEvent[]>();
     for (const t of processedEvents.wormholeNativeTransferredEvents) {
-        if (!t.extrinsicHash || !proofVerifiedExtrinsics.has(t.extrinsicHash)) continue;
-        const exits = unmatchedExitsByExtrinsic.get(t.extrinsicHash) ?? [];
+        if (!t.extrinsicId || !proofVerifiedExtrinsics.has(t.extrinsicId)) continue;
+        const exits = unmatchedExitsByExtrinsic.get(t.extrinsicId) ?? [];
         exits.push(t);
-        unmatchedExitsByExtrinsic.set(t.extrinsicHash, exits);
+        unmatchedExitsByExtrinsic.set(t.extrinsicId, exits);
     }
 
     for (const t of processedEvents.mintedEvents) {
         const who = getOrCreateAccount(t.who, lastBlockHeight);
-        if (!t.extrinsicHash || !proofVerifiedExtrinsics.has(t.extrinsicHash)) continue;
+        if (!t.extrinsicId || !proofVerifiedExtrinsics.has(t.extrinsicId)) continue;
         // Already credited via the explicit MinerVolumeFeePaid event above.
-        if (extrinsicsWithFeeEvent.has(t.extrinsicHash)) continue;
-        const exits = unmatchedExitsByExtrinsic.get(t.extrinsicHash) ?? [];
+        if (extrinsicsWithFeeEvent.has(t.extrinsicId)) continue;
+        const exits = unmatchedExitsByExtrinsic.get(t.extrinsicId) ?? [];
         const exitIndex = exits.findIndex((e) => e.to === t.who && e.amount === t.amount);
         if (exitIndex >= 0) {
             // Exit payout — already credited via its NativeTransferred event.
@@ -1762,9 +1760,10 @@ export async function updateAndCreateAccounts(
 
 /**
  * Create Extrinsic entities from processed extrinsic data.
- * Returns a Map of extrinsic hash -> Extrinsic entity for linking to other entities.
+ * Entity id is the hash; a replay of an already indexed hash gets `{hash}-{extrinsicId}`.
+ * Returns a Map of extrinsic id -> Extrinsic entity for linking to other entities.
  */
-async function createExtrinsics(
+export async function createExtrinsics(
     ctx: ProcessorContext<Store>,
     processedEvents: ProcessedEvents,
     accounts: Map<string, Account>,
@@ -1778,7 +1777,12 @@ async function createExtrinsics(
         [...processedEvents.extrinsics.values()].map((data) => data.signer),
     );
 
-    for (const [hash, data] of processedEvents.extrinsics) {
+    const hashes = [...new Set([...processedEvents.extrinsics.values()].map((data) => data.hash))];
+    const takenIds = new Set(
+        hashes.length > 0 ? (await ctx.store.findBy(Extrinsic, { id: In(hashes) })).map((e) => e.id) : [],
+    );
+
+    for (const [extrinsicId, data] of processedEvents.extrinsics) {
         const block = blocks.get(data.block);
         if (!block) continue;
 
@@ -1792,8 +1796,12 @@ async function createExtrinsics(
             }
         }
 
+        const id = takenIds.has(data.hash) ? `${data.hash}-${extrinsicId}` : data.hash;
+        takenIds.add(data.hash);
+
         const extrinsic = new Extrinsic({
-            id: hash,
+            id,
+            hash: data.hash,
             block,
             indexInBlock: data.indexInBlock,
             timestamp: data.timestamp,
@@ -1805,7 +1813,7 @@ async function createExtrinsics(
             fee: data.fee,
         });
 
-        extrinsicEntities.set(hash, extrinsic);
+        extrinsicEntities.set(extrinsicId, extrinsic);
     }
 
     return { extrinsics: extrinsicEntities, newCreatedAccounts: createdSigners.size };
@@ -1836,7 +1844,7 @@ export async function createReversibleTransfers(
         assert(block, `Block ${t.block} not found`);
 
         // Link to Extrinsic entity if available
-        const extrinsic = t.extrinsicHash ? extrinsics.get(t.extrinsicHash) : undefined;
+        const extrinsic = t.extrinsicId ? extrinsics.get(t.extrinsicId) : undefined;
 
         const scheduled = new ScheduledReversibleTransfer({
             id: t.id,
@@ -1908,7 +1916,7 @@ export async function createReversibleTransfers(
         assert(cancelledBy, `CancelledBy account ${e.who} not found`);
 
         // Link to Extrinsic entity if available
-        const extrinsic = e.extrinsicHash ? extrinsics.get(e.extrinsicHash) : undefined;
+        const extrinsic = e.extrinsicId ? extrinsics.get(e.extrinsicId) : undefined;
 
         cancelledReversibles.push(
             new CancelledReversibleTransfer({
@@ -1939,7 +1947,7 @@ export function createMultisigs(
         assert(block, `Block ${e.block} not found`);
         const creator = accounts.get(e.creator);
         assert(creator, `Creator account ${e.creator} not found`);
-        const extrinsic = e.extrinsicHash ? extrinsics.get(e.extrinsicHash) : undefined;
+        const extrinsic = e.extrinsicId ? extrinsics.get(e.extrinsicId) : undefined;
 
         multisigsByAddress.set(
             e.multisigAddress,
@@ -1965,7 +1973,7 @@ type MultisigProposalSeed = {
     proposalId: number;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     proposer?: string;
 };
 
@@ -2005,7 +2013,7 @@ export async function createMultisigProposals(
         return block;
     };
 
-    const getExtrinsic = (hash?: string) => (hash ? extrinsics.get(hash) : undefined);
+    const getExtrinsic = (id?: string) => (id ? extrinsics.get(id) : undefined);
 
     const getMultisig = async (address: string): Promise<Multisig> => {
         let multisig = multisigsByAddress.get(address);
@@ -2100,7 +2108,7 @@ export async function createMultisigProposals(
             createdAtBlock: block,
             createdAt: e.timestamp,
             updatedAt: e.timestamp,
-            createdExtrinsic: getExtrinsic(e.extrinsicHash),
+            createdExtrinsic: getExtrinsic(e.extrinsicId),
             multisig,
             proposalId: e.proposalId,
             proposer,
@@ -2145,7 +2153,7 @@ export async function createMultisigProposals(
                 id: e.id,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 proposal,
                 deposit: proposal.deposit,
                 burnedPalletFee,
@@ -2170,7 +2178,7 @@ export async function createMultisigProposals(
                 id: e.id,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 proposal,
                 approver,
                 approvalsCount: e.approvalsCount,
@@ -2190,7 +2198,7 @@ export async function createMultisigProposals(
                 id: e.id,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 proposal,
                 approvalsCount: e.approvalsCount,
                 fee: getFee(e),
@@ -2208,7 +2216,7 @@ export async function createMultisigProposals(
 
     const executed: ExecutedMultisigProposal[] = [];
     for (const e of processedEvents.multisigProposalExecutedEvents) {
-        const extrinsic = getExtrinsic(e.extrinsicHash);
+        const extrinsic = getExtrinsic(e.extrinsicId);
         assert(extrinsic?.signer, `Extrinsic signer not found for proposal executed event ${e.id}`);
 
         const block = getBlock(e.block);
@@ -2244,7 +2252,7 @@ export async function createMultisigProposals(
                 id: e.id,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 proposal,
                 cancelledBy,
                 fee: getFee(e),
@@ -2266,7 +2274,7 @@ export async function createMultisigProposals(
                 id: e.id,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 proposal,
                 removedBy,
                 fee: getFee(e),
@@ -2284,7 +2292,7 @@ export async function createMultisigProposals(
                 id: e.id,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 multisig: await getMultisig(e.multisigAddress),
                 claimer,
                 totalReturned: e.totalReturned,
@@ -2328,7 +2336,7 @@ export async function createTechReferenda(
         return block;
     };
 
-    const getExtrinsic = (hash?: string) => (hash ? extrinsics.get(hash) : undefined);
+    const getExtrinsic = (id?: string) => (id ? extrinsics.get(id) : undefined);
 
     const createdActors = await ensureAccountsInMap(
         ctx,
@@ -2414,7 +2422,7 @@ export async function createTechReferenda(
                 type,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 actor,
                 track: details?.track,
                 trackName: details?.trackName,
@@ -2473,7 +2481,7 @@ export async function createTechReferenda(
                 id: e.id,
                 block: getBlock(e.block),
                 timestamp: e.timestamp,
-                extrinsic: getExtrinsic(e.extrinsicHash),
+                extrinsic: getExtrinsic(e.extrinsicId),
                 specVersion: e.specVersion,
             }),
         );
@@ -2582,7 +2590,7 @@ export async function createMinerRewards(
 /**
  * Create WormholeExtrinsic and WormholeOutput entities with pre-computed privacy scores.
  *
- * Groups NativeTransferred events by extrinsic hash. Each extrinsic represents one
+ * Groups NativeTransferred events by extrinsic id. Each extrinsic represents one
  * proof verification containing one or more exit outputs.
  */
 async function createWormholeOutputs(
@@ -2611,18 +2619,18 @@ async function createWormholeOutputs(
     // Only include NativeTransferred events from extrinsics that also have ProofVerified.
     // This filters out deposit transfers (batch transfers to wormhole addresses) which
     // also emit NativeTransferred via the proof recorder extension.
-    const verifiedExtrinsicHashes = new Set<string>();
+    const verifiedExtrinsicIds = new Set<string>();
     for (const pv of proofVerifiedEvents) {
-        if (pv.extrinsicHash) verifiedExtrinsicHashes.add(pv.extrinsicHash);
+        if (pv.extrinsicId) verifiedExtrinsicIds.add(pv.extrinsicId);
     }
 
-    // Group only verified events by extrinsic hash
+    // Group only verified events by extrinsic id
     const grouped = new Map<string, typeof wormholeEvents>();
     for (const e of wormholeEvents) {
-        if (!e.extrinsicHash || !verifiedExtrinsicHashes.has(e.extrinsicHash)) continue;
-        const group = grouped.get(e.extrinsicHash) ?? [];
+        if (!e.extrinsicId || !verifiedExtrinsicIds.has(e.extrinsicId)) continue;
+        const group = grouped.get(e.extrinsicId) ?? [];
         group.push(e);
-        grouped.set(e.extrinsicHash, group);
+        grouped.set(e.extrinsicId, group);
     }
 
     const exitAccountIds = [...grouped.values()].flatMap((events) => events.map((e) => e.to));
@@ -2632,7 +2640,7 @@ async function createWormholeOutputs(
     const outputs: WormholeOutput[] = [];
     const nullifiers: WormholeNullifier[] = [];
 
-    for (const [extHash, events] of grouped) {
+    for (const [extId, events] of grouped) {
         const first = events[0];
         const block = processedEvents.blocks.get(first.block);
         const outputCount = events.length;
@@ -2650,11 +2658,11 @@ async function createWormholeOutputs(
         const score1 = privacyScore(totalAmount, totalAmount / 100n, pool, FEE_BPS, kMin, K_MAX);
         const score5 = privacyScore(totalAmount, totalAmount / 20n, pool, FEE_BPS, kMin, K_MAX);
 
-        // Link to the generic Extrinsic entity
-        const linkedExtrinsic = extHash ? extrinsicEntities.get(extHash) : undefined;
+        const linkedExtrinsic = extrinsicEntities.get(extId);
+        assert(linkedExtrinsic, `Extrinsic ${extId} not found for wormhole proof`);
 
         const wormholeExtrinsic = new WormholeExtrinsic({
-            id: extHash,
+            id: linkedExtrinsic.id,
             block: block,
             timestamp: first.timestamp,
             extrinsic: linkedExtrinsic,
@@ -2687,7 +2695,7 @@ async function createWormholeOutputs(
         }
 
         // Create nullifier entities from the ProofVerified event for this extrinsic
-        const proofEvent = proofVerifiedEvents.find((pv) => pv.extrinsicHash === extHash);
+        const proofEvent = proofVerifiedEvents.find((pv) => pv.extrinsicId === extId);
         if (proofEvent && proofEvent.nullifiers) {
             for (let i = 0; i < proofEvent.nullifiers.length; i++) {
                 const nullifierBytes = proofEvent.nullifiers[i];
@@ -2695,7 +2703,7 @@ async function createWormholeOutputs(
                 const nullifierHash = computeAccountIdHash(nullifierBytes);
                 nullifiers.push(
                     new WormholeNullifier({
-                        id: `${extHash}-nullifier-${i}`,
+                        id: `${wormholeExtrinsic.id}-nullifier-${i}`,
                         nullifier: nullifierHex,
                         nullifierHash: nullifierHash,
                         wormholeExtrinsic: wormholeExtrinsic,
@@ -2759,7 +2767,7 @@ export function createEvents(
         executedReversiblesByTxId.set(er.txId, er);
     }
 
-    // Build lookup for fee and extrinsic hash from Transfer events.
+    // Build lookup for fee and extrinsic id from Transfer events.
     // Uses array to support duplicate (from,to,amount,block) transfers.
     //
     // Example with 3 identical transfers (alice→bob, 5 quan)
@@ -2780,14 +2788,14 @@ export function createEvents(
     //   3rd transfer → .shift() → 30n, array becomes []
 
     const feeLookup = new Map<string, bigint[]>();
-    const extrinsicHashLookup = new Map<string, string[]>();
+    const extrinsicIdLookup = new Map<string, string[]>();
     for (const evt of transferEvents) {
         const key = createTransferKey(evt);
         if (!feeLookup.has(key)) feeLookup.set(key, []);
         feeLookup.get(key)!.push(evt.fee ?? 0n);
-        if (evt.extrinsicHash) {
-            if (!extrinsicHashLookup.has(key)) extrinsicHashLookup.set(key, []);
-            extrinsicHashLookup.get(key)!.push(evt.extrinsicHash);
+        if (evt.extrinsicId) {
+            if (!extrinsicIdLookup.has(key)) extrinsicIdLookup.set(key, []);
+            extrinsicIdLookup.get(key)!.push(evt.extrinsicId);
         }
     }
 
@@ -2806,8 +2814,8 @@ export function createEvents(
         const availableFee = feeLookup.get(transferKey);
         const fee = availableFee?.shift();
 
-        const extHash = t.extrinsicHash ?? extrinsicHashLookup.get(transferKey)?.shift();
-        const extrinsic = extHash ? extrinsics.get(extHash) : undefined;
+        const extId = t.extrinsicId ?? extrinsicIdLookup.get(transferKey)?.shift();
+        const extrinsic = extId ? extrinsics.get(extId) : undefined;
         const transferCount = t.transferCount;
         const leafIndex = t.leafIndex;
 
@@ -2914,7 +2922,7 @@ export function createEvents(
         assert(block, `Block ${e.block} not found`);
 
         // Link to Extrinsic entity if available
-        const extrinsic = e.extrinsicHash ? extrinsics.get(e.extrinsicHash) : undefined;
+        const extrinsic = e.extrinsicId ? extrinsics.get(e.extrinsicId) : undefined;
 
         const errorEvent = new ErrorEvent({
             id: e.id,
@@ -2950,7 +2958,7 @@ export function createEvents(
         assert(guardian, `Guardian account ${e.guardian} not found`);
 
         // Link to Extrinsic entity if available
-        const extrinsic = e.extrinsicHash ? extrinsics.get(e.extrinsicHash) : undefined;
+        const extrinsic = e.extrinsicId ? extrinsics.get(e.extrinsicId) : undefined;
 
         const highSecuritySet = new HighSecuritySet({
             id: e.id,
@@ -2985,7 +2993,7 @@ export function createEvents(
         assert(block, `Block ${e.block} not found`);
         const multisig = multisigByAddress.get(e.multisigAddress);
         assert(multisig, `Multisig ${e.multisigAddress} not found`);
-        const extrinsic = e.extrinsicHash ? extrinsics.get(e.extrinsicHash) : undefined;
+        const extrinsic = e.extrinsicId ? extrinsics.get(e.extrinsicId) : undefined;
 
         allEvents.push(
             new Event({
@@ -3083,7 +3091,7 @@ export function createEvents(
         assert(block, `Block ${e.block} not found`);
         const depositClaimed = depositsClaimedByEventId.get(e.id);
         assert(depositClaimed, `MultisigDepositsClaimed ${e.id} not found`);
-        const extrinsic = e.extrinsicHash ? extrinsics.get(e.extrinsicHash) : undefined;
+        const extrinsic = e.extrinsicId ? extrinsics.get(e.extrinsicId) : undefined;
 
         allEvents.push(
             new Event({
@@ -3831,7 +3839,7 @@ export function buildUnifiedTransactions(
                 new UnifiedTransaction({
                     id: `wormhole:${t.id}`,
                     type: UnifiedTransactionType.WORMHOLE,
-                    hash: wormholeExt.id,
+                    hash: linkedExtrinsic?.hash,
                     block: t.block,
                     blockHeight: t.block.height,
                     timestamp: t.timestamp,
@@ -3850,7 +3858,7 @@ export function buildUnifiedTransactions(
             new UnifiedTransaction({
                 id: `immediate:${t.id}`,
                 type: UnifiedTransactionType.IMMEDIATE,
-                hash: t.extrinsic?.id,
+                hash: t.extrinsic?.hash,
                 block: t.block,
                 blockHeight: t.block.height,
                 timestamp: t.timestamp,
@@ -3869,7 +3877,7 @@ export function buildUnifiedTransactions(
             new UnifiedTransaction({
                 id: `scheduled-reversible:${s.id}`,
                 type: UnifiedTransactionType.SCHEDULED_REVERSIBLE,
-                hash: s.extrinsic?.id,
+                hash: s.extrinsic?.hash,
                 block: s.block,
                 blockHeight: s.block.height,
                 timestamp: s.timestamp,
@@ -3909,7 +3917,7 @@ export function buildUnifiedTransactions(
             new UnifiedTransaction({
                 id: `cancelled-reversible:${c.id}`,
                 type: UnifiedTransactionType.CANCELLED_REVERSIBLE,
-                hash: c.extrinsic?.id,
+                hash: c.extrinsic?.hash,
                 block: c.block,
                 blockHeight: c.block.height,
                 timestamp: c.timestamp,
@@ -3930,7 +3938,7 @@ export function buildUnifiedTransactions(
             new UnifiedTransaction({
                 id: `wormhole:${w.id}`,
                 type: UnifiedTransactionType.WORMHOLE,
-                hash: w.extrinsic?.id ?? w.id,
+                hash: w.extrinsic?.hash,
                 block: w.block,
                 blockHeight: w.block.height,
                 timestamp: w.timestamp,

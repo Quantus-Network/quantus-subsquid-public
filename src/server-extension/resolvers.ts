@@ -196,6 +196,7 @@ export class TransferPrefixResolver {
         const queryBuilder = manager
             .createQueryBuilder(Transfer, "transfer")
             .leftJoinAndSelect("transfer.block", "block")
+            .leftJoinAndSelect("transfer.extrinsic", "extrinsic")
             .leftJoinAndSelect("transfer.from", "fromAccount")
             .leftJoinAndSelect("transfer.to", "toAccount");
 
@@ -254,7 +255,7 @@ export class TransferPrefixResolver {
             blockId: t.block.id,
             blockHeight: t.block.height,
             timestamp: t.timestamp,
-            extrinsicHash: t.extrinsic?.id || undefined,
+            extrinsicHash: t.extrinsic?.hash,
             fromId: t.from.id,
             toId: t.to.id,
             amount: t.amount,
@@ -364,7 +365,7 @@ export class NullifierPrefixResolver {
             nullifiers: results.map((n: any) => ({
                 nullifier: n.nullifier,
                 nullifierHash: n.nullifierHash,
-                extrinsicHash: n.wormholeExtrinsic?.extrinsic?.id ?? "",
+                extrinsicHash: n.wormholeExtrinsic?.extrinsic?.hash ?? "",
                 blockHeight: n.block?.height ?? 0,
                 timestamp: n.timestamp,
             })),

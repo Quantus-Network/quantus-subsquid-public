@@ -26,7 +26,7 @@ export class UnifiedTransaction {
     type!: UnifiedTransactionType
 
     /**
-     * Extrinsic hash / id; null for unsigned executed-reversible
+     * Extrinsic hash; null for unsigned executed-reversible
      */
     @Index_()
     @StringColumn_({nullable: true})

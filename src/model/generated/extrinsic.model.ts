@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_, IntColumn as IntColumn_, DateTimeColumn as DateTimeColumn_, StringColumn as StringColumn_, BooleanColumn as BooleanColumn_, BigIntColumn as BigIntColumn_, OneToMany as OneToMany_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, ManyToOne as ManyToOne_, IntColumn as IntColumn_, DateTimeColumn as DateTimeColumn_, BooleanColumn as BooleanColumn_, BigIntColumn as BigIntColumn_, OneToMany as OneToMany_} from "@subsquid/typeorm-store"
 import {Block} from "./block.model"
 import {Account} from "./account.model"
 import {Event} from "./event.model"
@@ -13,10 +13,17 @@ export class Extrinsic {
     }
 
     /**
-     * Extrinsic hash
+     * Extrinsic hash; a replay of the same bytes in a later block gets {hash}-{blockHeight}-{blockHashPrefix}-{indexInBlock}
      */
     @PrimaryColumn_()
     id!: string
+
+    /**
+     * Extrinsic hash; not unique across replays
+     */
+    @Index_()
+    @StringColumn_({nullable: false})
+    hash!: string
 
     @Index_()
     @ManyToOne_(() => Block, {nullable: true})
