@@ -3,7 +3,7 @@ import { Block } from "./model";
 import { Bounded, Tally } from "./generated_types/v148";
 
 export interface ExtrinsicData {
-    id: string; // extrinsic hash
+    hash: string;
     block: string;
     indexInBlock: number;
     timestamp: Date;
@@ -19,7 +19,7 @@ export interface TransferEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     from: string;
     to: string;
     amount: bigint;
@@ -30,7 +30,7 @@ export interface ReversibleTransferEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     from: string;
     to: string;
     amount: bigint;
@@ -42,7 +42,7 @@ export interface ReversibleTransferCancelledEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     txId: string;
     who: string;
 }
@@ -81,7 +81,7 @@ export interface BalanceEventData {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     amount: bigint;
 }
 
@@ -93,7 +93,7 @@ export interface BalanceSetEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     who: string;
     free: bigint;
 }
@@ -108,7 +108,7 @@ export interface ErrorEventData {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     errorType: string;
     errorModule?: string;
     errorName?: string;
@@ -119,7 +119,7 @@ export interface HighSecuritySetEventData {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     who: string;
     guardian: string;
     delay: bigint;
@@ -129,7 +129,7 @@ export interface WormholeNativeTransferredEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     from: string;
     to: string;
     amount: bigint;
@@ -142,7 +142,7 @@ export interface WormholeProofVerifiedEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     exitAmount: bigint;
     nullifiers: Uint8Array[];
 }
@@ -151,7 +151,7 @@ export interface WormholeMinerVolumeFeeEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     miner: string;
     amount: bigint;
 }
@@ -160,7 +160,7 @@ export interface MultisigCreatedEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     fee?: bigint;
     creator: string;
     multisigAddress: string;
@@ -173,7 +173,7 @@ export interface MultisigProposalCreatedEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     fee?: bigint;
     multisigAddress: string;
     proposer: string;
@@ -186,7 +186,7 @@ export interface MultisigSignerApprovedEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     fee?: bigint;
     multisigAddress: string;
     approver: string;
@@ -198,7 +198,7 @@ export interface MultisigProposalReadyEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     fee?: bigint;
     multisigAddress: string;
     proposalId: number;
@@ -209,7 +209,7 @@ export interface MultisigProposalExecutedEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash: string;
+    extrinsicId: string;
     fee?: bigint;
     multisigAddress: string;
     proposalId: number;
@@ -223,7 +223,7 @@ export interface MultisigProposalCancelledEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     fee?: bigint;
     multisigAddress: string;
     proposer: string;
@@ -234,7 +234,7 @@ export interface MultisigProposalRemovedEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     fee?: bigint;
     multisigAddress: string;
     proposer: string;
@@ -246,7 +246,7 @@ export interface MultisigDepositsClaimedEvent {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     fee?: bigint;
     multisigAddress: string;
     claimer: string;
@@ -262,7 +262,7 @@ export interface TechReferendumEventData {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     index: number;
     /** Track id (carried by Submitted/DecisionStarted) */
     track?: number;
@@ -278,7 +278,7 @@ export interface RuntimeUpgradeEventData {
     id: string;
     block: string;
     timestamp: Date;
-    extrinsicHash?: string;
+    extrinsicId?: string;
     /** Runtime spec version in effect after the upgrade */
     specVersion?: number;
 }
@@ -305,8 +305,8 @@ export interface ProcessedEvents {
     suspendedEvents: AccountBalanceEvent[];
     restoredEvents: AccountBalanceEvent[];
     upgradedEvents: Omit<AccountBalanceEvent, "amount">[];
-    issuedEvents: Omit<BalanceEventData, "extrinsicHash">[];
-    rescindedEvents: Omit<BalanceEventData, "extrinsicHash">[];
+    issuedEvents: Omit<BalanceEventData, "extrinsicId">[];
+    rescindedEvents: Omit<BalanceEventData, "extrinsicId">[];
     lockedEvents: AccountBalanceEvent[];
     unlockedEvents: AccountBalanceEvent[];
     frozenEvents: AccountBalanceEvent[];
@@ -336,6 +336,6 @@ export interface ProcessedEvents {
     techReferendumKilledEvents: TechReferendumEventData[];
     runtimeUpgradeEvents: RuntimeUpgradeEventData[];
     blocks: Map<string, Block>;
-    extrinsics: Map<string, ExtrinsicData>; // extrinsic hash -> extrinsic data
+    extrinsics: Map<string, ExtrinsicData>; // extrinsic id -> extrinsic data
     executedTransferToReversibleExecutedMapping: Map<string, string>; // transfer id : reversible executed id
 }

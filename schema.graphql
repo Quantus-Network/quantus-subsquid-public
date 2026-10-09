@@ -29,8 +29,10 @@ type Account @entity {
 
 "An extrinsic (transaction) submitted to the chain"
 type Extrinsic @entity {
-    "Extrinsic hash"
+    "Extrinsic hash; a replay of the same bytes in a later block gets {hash}-{blockHeight}-{blockHashPrefix}-{indexInBlock}"
     id: ID!
+    "Extrinsic hash; not unique across replays"
+    hash: String! @index
     block: Block!
     "Index of the extrinsic within the block"
     indexInBlock: Int! @index
@@ -652,7 +654,7 @@ type UnifiedTransaction
     "Prefixed stable key: immediate:{id}, scheduled-reversible:{id}, executed-reversible:{id}, cancelled-reversible:{id}, wormhole:{id}"
     id: ID!
     type: UnifiedTransactionType! @index
-    "Extrinsic hash / id; null for unsigned executed-reversible"
+    "Extrinsic hash; null for unsigned executed-reversible"
     hash: String @index
     block: Block!
     blockHeight: Int! @index
