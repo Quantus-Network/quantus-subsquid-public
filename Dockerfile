@@ -1,5 +1,5 @@
 # Stage 1 — Builder
-FROM node:22.18-alpine AS builder
+FROM node:24.22.1-alpine AS builder
 
 # Install build tools (temporary, needed for node-gyp)
 RUN apk add --no-cache python3 make g++ curl
@@ -19,7 +19,7 @@ COPY . .
 RUN npm run postinstall
 
 # Stage 2 — Runtime
-FROM node:22.18-alpine
+FROM node:24.22.1-alpine
 
 RUN apk --no-cache add curl
 
